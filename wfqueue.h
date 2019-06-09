@@ -88,11 +88,12 @@ inline LONG __WFQ_InterlockedExchange(LONG volatile *target, LONG value) {
 #define __WFQ_THREAD_ID_ GetCurrentThreadId
 #endif
 
-#ifdef WFQ_EXPANDABLE
+#if 0 
 
 /*
 *
-*  WFQ Expandable SIZE wait free queue, it is expandable size with x number of expandable time
+*  WFQ Expandable SIZE wait free queue is under code revised and it's not for use at the moment, 
+*  it is expandable size with x number of expandable time
 *  to use it just define WFQ_EXPANDABLE on top of the header
 */
 

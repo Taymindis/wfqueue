@@ -6,20 +6,19 @@
 #include <iostream>
 #include <assert.h>
 #include <thread>
-// #define WFQ_EXPANDABLE 1
 #include "wfqueue.h"
 static const int MILLION = 1000000;
 static const int TEST_MAX_INPUT = MILLION;
 
 typedef struct {
-    int v;
-} intV;
+    size_t v;
+} MyVal;
 
 int TEST_COUNT = 0;
 
 
-void* newval(int digit) {
-    intV *data = (intV*)malloc(sizeof(intV));
+void* newval(size_t digit) {
+    MyVal *data = (MyVal*)malloc(sizeof(MyVal));
     data->v = digit;
     return (void*) data;
 }
@@ -35,19 +34,15 @@ int running_wfq_test(size_t n_producer, size_t n_cosumer, size_t n_producing, si
 
     time(&start_t);
 
-#ifdef WFQ_EXPANDABLE
-    wfqueue_t *q = wfq_create(TEST_MAX_INPUT, 30); // can expand to 30 times
-    char *testname = (char*)"Expandable size wfqueue test";
-#else
+
     wfqueue_t *q = wfq_create(TEST_MAX_INPUT * n_producer);
     char *testname = (char*)"Fixed size wfqueue test";
-#endif
 
     for (i = 0; i < n_producer ; i++) {
         testThreads[i] = std::thread([&](size_t id) {
             int z;
             for (z = 0; z < TEST_MAX_INPUT; z++) {
-                unsigned int xx = __WFQ_FETCH_ADD_(&n_producing, 1);
+                size_t xx = __WFQ_FETCH_ADD_(&n_producing, 1);
                 wfq_enq(q, newval(xx));
                 // wfq_sleep(1);
                 // if (xx % 100000 == 0)
@@ -58,8 +53,8 @@ int running_wfq_test(size_t n_producer, size_t n_cosumer, size_t n_producing, si
     for (; i < total_threads ; i++) {
         testThreads[i] = std::thread([&](size_t id) {
             for (;;) {
-                intV* s;
-                while ( (s = (intV*)wfq_deq(q) )  ) {
+                MyVal* s;
+                while ( (s = (MyVal*)wfq_deq(q) )  ) {
                     // if (s->v % 100000 == 0) {
                     //     printf("t %d\n", s->v);
                     // }
@@ -137,6 +132,7 @@ int main(int argc, char* argv[]) {
             ret = running_wfq_test(NUM_PRODUCER, NUM_CONSUMER, 0, 0, NUM_PRODUCER + NUM_CONSUMER, "MCSP");
         }
     } else {
+        ret = -1;
         printf("One thread is not enough for testing\n");
     }
 
