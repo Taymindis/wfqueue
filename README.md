@@ -122,4 +122,4 @@ public:
 
 ## You may also like lock free queue FIFO
 
-[lfqueue](https://github.com/Taymindis/wfqueue)
+[lfqueue](https://github.com/Taymindis/lfqueue)
