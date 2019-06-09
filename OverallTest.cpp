@@ -6,7 +6,7 @@
 #include <iostream>
 #include <assert.h>
 #include <thread>
-#define WFQ_EXPANDABLE 1
+// #define WFQ_EXPANDABLE 1
 #include "wfqueue.h"
 static const int MILLION = 1000000;
 static const int TEST_MAX_INPUT = MILLION;
