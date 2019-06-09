@@ -38,7 +38,7 @@ size_t wfq_capacity(wfqueue_t *q);
 #define WFQ_EXPANDABLE 1 // comment it if you only want fixed size
 #include "wfqueue.h"
 
-// total will be PER_ALLOC_SIZE * NUMBER_OF_EXPAND, expand only use
+// total will be PRE_ALLOC_SIZE * NUMBER_OF_EXPAND, expand only use
 wfqueue_t *q = wfq_create(PRE_ALLOC_SIZE, NUMBER_OF_EXPAND); 
 
 // wrap in to thread
@@ -65,7 +65,7 @@ wfq_destroy(q);
 #define WFQ_EXPANDABLE 1 // comment it if you only want fixed size
 #include "wfqueue.h"
 
-// total will be PER_ALLOC_SIZE * NUMBER_OF_EXPAND, expand only use
+// total will be PRE_ALLOC_SIZE * NUMBER_OF_EXPAND, expand only use
 wfqueue_t *q = wfq_create(PRE_ALLOC_SIZE, NUMBER_OF_EXPAND); 
 
 // wrap in to thread
