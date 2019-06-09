@@ -2,7 +2,7 @@
 
 # wfqueue.h [![Build Status](https://travis-ci.org/Taymindis/wfqueue.svg?branch=master)](https://travis-ci.org/Taymindis/wfqueue)
 
-c/c++ async FIFO wait-free queue, easy built cross platform(no extra dependencies needed) 
+c/c++ FIFO wait-free queue, easy built cross platform(no extra dependencies needed) 
 
 Guarantee thread safety memory management, and it's all in one header only, as fast as never wait.
 
