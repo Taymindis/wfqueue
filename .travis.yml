@@ -5,7 +5,7 @@ compiler:
   - clang++
 
 before_script:
-  - $CXX -Wall -DWFQ_EXPANDABLE=1 -std=c++11 -I./ OverallTest.cpp -pthread -o overalltest
+  - $TRAVIS_COMPILER -Wall -DWFQ_EXPANDABLE=1 -std=c++11 -I./ OverallTest.cpp -pthread -o overalltest
 
 script: ./overalltest
 

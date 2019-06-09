@@ -9,7 +9,7 @@ Guarantee thread safety memory management, and it's all in one header only, as f
 
 # All Platform tests
 
-GCC/CLANG/G++/CLANG++
+GCC/CLANG/G++/CLANG++ | [![Build Status](https://travis-ci.org/Taymindis/wfqueue.svg?branch=master)](https://travis-ci.org/Taymindis/wfqueue)
 
 VS x64/x86
 
