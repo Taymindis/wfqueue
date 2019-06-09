@@ -51,7 +51,7 @@ extern "C" {
 #define __WFQ_SWAP_ __sync_lock_test_and_set
 #define __WFQ_THREAD_ID_ pthread_self
 #define __WFQ_SYNC_MEMORY_ __sync_synchronize
-#define __WFQ_YIELD_THREAD_() sleep(0)//; sched_yield()
+#define __WFQ_YIELD_THREAD_ sched_yield
 #else
 #include <Windows.h>
 #ifdef _WIN64
@@ -84,15 +84,15 @@ inline LONG __WFQ_InterlockedExchange(LONG volatile *target, LONG value) {
 // thread
 #include <windows.h>
 #define __WFQ_SYNC_MEMORY_ MemoryBarrier
-#define __WFQ_YIELD_THREAD_() Sleep(0)//; SwitchToThread()
+#define __WFQ_YIELD_THREAD_ SwitchToThread
 #define __WFQ_THREAD_ID_ GetCurrentThreadId
 #endif
 
-#if 0 
+#if 0
 
 /*
 *
-*  WFQ Expandable SIZE wait free queue is under code revised and it's not for use at the moment, 
+*  WFQ Expandable SIZE wait free queue is under code revised and it's not for use at the moment,
 *  it is expandable size with x number of expandable time
 *  to use it just define WFQ_EXPANDABLE on top of the header
 */
@@ -109,6 +109,7 @@ typedef struct {
     size_t ttl_max;
     size_t sets;
     void ***nptr;
+    void **currset;
 } wfqueue_t;
 
 /*
@@ -161,7 +162,6 @@ wfq_create(size_t size, size_t nexpand) {
 static int
 _wfq_enq_(wfqueue_t *q, size_t headnow, size_t nenq, void* val) {
     size_t max, set;
-    void *old_val;
     int success, spin;
 
     if (__WFQ_FETCH_ADD_(&q->count, 0) >= (q->ttl_max - nenq)) {
@@ -171,7 +171,7 @@ _wfq_enq_(wfqueue_t *q, size_t headnow, size_t nenq, void* val) {
     }
 
     max = q->max;
-    set = (( headnow % q->ttl_max) / max);
+    set = headnow % q->ttl_max;
 
     if (__WFQ_CAS_(&q->nptr[set], NULL, WFQ_PENDING_SET_PTR)) {
         void **new_ = (void**) malloc(max * sizeof(void*));
@@ -197,12 +197,14 @@ _wfq_enq_(wfqueue_t *q, size_t headnow, size_t nenq, void* val) {
     //    nenq = __WFQ_FETCH_ADD_(&q->nenq, 1);
     //    if (count < (max - nenq)) {
     //        head = __WFQ_FETCH_ADD_(&q->head, 1);
-    __WFQ_FETCH_ADD_(&q->count, 1);
     headnow %= max;
-    old_val = __WFQ_SWAP_(&q->nptr[set][headnow], val);
-    success = old_val == NULL;
+    if (__WFQ_CAS_(&q->nptr[set][headnow], NULL, val)) {
+        __WFQ_FETCH_ADD_(&q->count, 1);
+        __WFQ_FETCH_ADD_(&q->nenq, -1);
+        return 1;
+    }
     __WFQ_FETCH_ADD_(&q->nenq, -1);
-    return success;
+    return 0;
 }
 
 static inline int
@@ -319,23 +321,21 @@ wfq_create(size_t fixed_size) {
 static int
 wfq_enq(wfqueue_t *q, void* val) {
     size_t nenq, head, max;
-    void *old_val;
-    int success;
     __WFQ_SYNC_MEMORY_();
     nenq = __WFQ_FETCH_ADD_(&q->nenq, 1);
     max = __WFQ_FETCH_ADD_(&q->max, 0);
     if ((__WFQ_FETCH_ADD_(&q->count, 0)) < (max - nenq)) {
         head = __WFQ_FETCH_ADD_(&q->head, 1);
         head %= max;
-        old_val = __WFQ_SWAP_(q->nptr + head, val);
-        __WFQ_FETCH_ADD_(&q->count, 1);
-        success = old_val == NULL;
+        if (__WFQ_CAS_(q->nptr + head, NULL, val)) {
+            __WFQ_FETCH_ADD_(&q->count, 1);
+            __WFQ_FETCH_ADD_(&q->nenq, -1);
+            return 1;
+        }
     }
-    else {
-        success = 0;
-    }
+
     __WFQ_FETCH_ADD_(&q->nenq, -1);
-    return success;// unreached
+    return 0;
 }
 
 static void*

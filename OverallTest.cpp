@@ -101,15 +101,11 @@ int running_wfq_test(size_t n_producer, size_t n_cosumer, size_t n_producing, si
 }
 
 int main(int argc, char* argv[]) {
-    int ret, i;
+    int ret=0, i;
 
     unsigned int n = std::thread::hardware_concurrency();
     std::cout << n << " Concurrent threads supported \n";
 
-
-    if(n > 3) {
-        n/=2;
-    }
 
     if (n > 1) {
         int NUM_PRODUCER = n;
