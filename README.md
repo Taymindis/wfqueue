@@ -20,8 +20,8 @@ VS x64/x86 | [![Build status](https://ci.appveyor.com/api/projects/status/k8rwm0
 ```c
 
 wfqueue_t *wfq_create(size_t size, size_t nexpand);
-int wfq_enq(wfqueue_t *q, size_t headnow, size_t nenq, void* val);
-void* wfq_deq(wfqueue_t *q,  size_t ndeq);
+int wfq_enq(wfqueue_t *q, void* val);
+void* wfq_deq(wfqueue_t *q);
 void wfq_destroy(wfqueue_t *q);
 size_t wfq_size(wfqueue_t *q);
 size_t wfq_capacity(wfqueue_t *q);
