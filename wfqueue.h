@@ -1,24 +1,24 @@
-/* 
- * 
+/*
+ *
  * BSD 3-Clause License
- * 
+ *
  * Copyright (c) 2019, Taymindis Woon
  * All rights reserved.
- * 
+ *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
- * 
+ *
  * 1. Redistributions of source code must retain the above copyright notice, this
  *    list of conditions and the following disclaimer.
- * 
+ *
  * 2. Redistributions in binary form must reproduce the above copyright notice,
  *    this list of conditions and the following disclaimer in the documentation
  *    and/or other materials provided with the distribution.
- * 
+ *
  * 3. Neither the name of the copyright holder nor the names of its
  *    contributors may be used to endorse or promote products derived from
  *    this software without specific prior written permission.
- * 
+ *
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
  * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -226,7 +226,7 @@ _wfq_deq_(wfqueue_t *q,  size_t ndeq) {
         tailnow = __WFQ_FETCH_ADD_(&q->tail, 0);
         set = (( tailnow % q->ttl_max) / max);
         if (++spin == WFQ_MAX_SPIN) {
-            __WFQ_YIELD_THREAD_();            
+            __WFQ_YIELD_THREAD_();
             spin = 0;
         }
         if (__WFQ_CAS_(&q->nptr[set], NULL, NULL)) {
@@ -236,19 +236,15 @@ _wfq_deq_(wfqueue_t *q,  size_t ndeq) {
             continue;
         }
         tailnow %= max ;
-        val = q->nptr[set][tailnow];
-        if (__WFQ_CAS_(&q->nptr[set][tailnow], val, NULL)) {
-            if (val) {
-                __WFQ_FETCH_ADD_(&q->tail, 1);
-                __WFQ_FETCH_ADD_(&q->count, -1);
-                goto Q_RET;
-            }
+        if ( (val = __WFQ_SWAP_(&q->nptr[set][tailnow], NULL) ) ) {
+            __WFQ_FETCH_ADD_(&q->tail, 1);
+            __WFQ_FETCH_ADD_(&q->count, -1);
+            __WFQ_FETCH_ADD_(&q->ndeq, -1);
+            return val;
         }
     }
-    val = NULL;
-Q_RET:
     __WFQ_FETCH_ADD_(&q->ndeq, -1);
-    return val;
+    return NULL;
 }
 
 static inline void*
@@ -271,7 +267,7 @@ wfq_destroy(wfqueue_t *q) {
 }
 
 
-#else 
+#else
 
 /*
 *
@@ -288,12 +284,12 @@ typedef struct {
     volatile size_t max;
     void **nptr;
 } wfqueue_t;
-    
+
 static wfqueue_t *wfq_create(size_t fixed_size);
 static int wfq_enq(wfqueue_t *q, void* val);
 static void* wfq_deq(wfqueue_t *q);
 static void wfq_destroy(wfqueue_t *q);
-    
+
 static wfqueue_t *
 wfq_create(size_t fixed_size) {
     size_t i;
@@ -319,7 +315,7 @@ wfq_create(size_t fixed_size) {
     return q;
 }
 
-static int 
+static int
 wfq_enq(wfqueue_t *q, void* val) {
     size_t nenq, head, max;
     void *old_val;
@@ -341,39 +337,35 @@ wfq_enq(wfqueue_t *q, void* val) {
     return success;// unreached
 }
 
-static void* 
+static void*
 wfq_deq(wfqueue_t *q) {
     size_t ndeq, tail, max;
     void *val;
     int spin = 0;
-    
+
     __WFQ_SYNC_MEMORY_();
     ndeq = __WFQ_FETCH_ADD_(&q->ndeq, 1);
     while (__WFQ_FETCH_ADD_(&q->count, 0)  > ndeq) {
         tail = __WFQ_FETCH_ADD_(&q->tail, 0);
         max = __WFQ_FETCH_ADD_(&q->max, 0);
         tail %= max;
-        val = q->nptr[tail];
-        if (__WFQ_CAS_(q->nptr + tail, val, NULL)) {
-            if (val) {
-                __WFQ_FETCH_ADD_(&q->tail, 1);
-                __WFQ_FETCH_ADD_(&q->count, -1);
-                goto QRESULT;
-            }
+        if ( (val = __WFQ_SWAP_(q->nptr + tail, NULL) ) ) {
+            __WFQ_FETCH_ADD_(&q->tail, 1);
+            __WFQ_FETCH_ADD_(&q->count, -1);
+            __WFQ_FETCH_ADD_(&q->ndeq, -1);
+            return val;
         }
         if (++spin == WFQ_MAX_SPIN) {
             __WFQ_YIELD_THREAD_();
             spin = 0;
         }
     }
-    val = NULL;
-QRESULT:
     __WFQ_FETCH_ADD_(&q->ndeq, -1);
-    return val;
+    return NULL;
 }
 
 
-static void 
+static void
 wfq_destroy(wfqueue_t *q) {
     free(q->nptr);
     free(q);
@@ -383,12 +375,12 @@ wfq_destroy(wfqueue_t *q) {
 #endif
 
 
-static inline size_t 
+static inline size_t
 wfq_size(wfqueue_t *q) {
     return __WFQ_FETCH_ADD_(&q->count, 0);
 }
 
-static inline size_t 
+static inline size_t
 wfq_capacity(wfqueue_t *q) {
     return __WFQ_FETCH_ADD_(&q->max, 0);
 }
