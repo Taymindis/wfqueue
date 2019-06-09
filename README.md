@@ -1,6 +1,6 @@
 <p align="left"><img src="wfqueue_logo.png" alt="wfqueue logo" /></p>
 
-# wfqueue
+# wfqueue.h [![Build Status](https://travis-ci.org/Taymindis/wfqueue.svg?branch=master)](https://travis-ci.org/Taymindis/wfqueue)
 
 c/c++ async FIFO wait-free queue, easy built cross platform(no extra dependencies needed) 
 
