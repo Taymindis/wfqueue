@@ -47,8 +47,11 @@ wfq_enq(q, new ClassVal); // or malloc if c programming, return 1 if success enq
 // wrap in to thread
 ClassVal *s = (intV*)wfq_deq(q); // return NULL/nullptr if no val consuming
 
+if(s) {
+  s->do_op();
 
-delete s;
+  delete s;
+}
 
 
 wfq_destroy(q);
@@ -71,8 +74,11 @@ wfq_enq(q, malloc(sizeof(ClassVal)); // or malloc if c programming, return 1 if 
 // wrap in to thread
 ClassVal *s = (intV*)wfq_deq(q); // return NULL/nullptr if no val consuming
 
-if(s)
- free(s);
+if(s) {
+  s->do_op();
+
+  free(s);
+}
 
 wfq_destroy(q);
 
