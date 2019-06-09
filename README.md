@@ -1,6 +1,6 @@
 <p align="left"><img src="wfqueue_logo.png" alt="wfqueue logo" /></p>
 
-# wfqueue [![Build Status](https://travis-ci.org/Taymindis/wfqueue.svg?branch=master)](https://travis-ci.org/Taymindis/wfqueue)
+# wfqueue
 
 c/c++ async FIFO wait-free queue, easy built cross platform(no extra dependencies needed) 
 
@@ -9,9 +9,9 @@ Guarantee thread safety memory management, and it's all in one header only, as f
 
 # All Platform tests
 
-GCC/CLANG/G++/CLANG++ | [![Build Status](https://travis-ci.org/Taymindis/wfqueue.svg?branch=master)](https://travis-ci.org/Taymindis/wfqueue)
+GCC/CLANG/G++/CLANG++
 
-VS x64/x86 | [![Build status](https://ci.appveyor.com/api/projects/status/7srsrdgj7f524sam?svg=true)](https://ci.appveyor.com/project/Taymindis/wfqueue)
+VS x64/x86
 
 
 #### support MPMC, MPSC, MCSP
@@ -114,4 +114,4 @@ public:
 
 ## You may also like lock free queue FIFO
 
-[wfqueue](https://github.com/Taymindis/wfqueue)
+[lfqueue](https://github.com/Taymindis/wfqueue)
