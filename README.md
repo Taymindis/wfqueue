@@ -19,7 +19,8 @@ VS x64/x86 | [![Build status](https://ci.appveyor.com/api/projects/status/k8rwm0
 ## API 
 ```c
 
-wfqueue_t *wfq_create(size_t size, size_t nexpand);
+// Fixed size of queue, it should at least 2 times more than the number of concurrency level.
+wfqueue_t *wfq_create(size_t fixed_size);
 int wfq_enq(wfqueue_t *q, void* val);
 void* wfq_deq(wfqueue_t *q);
 void wfq_destroy(wfqueue_t *q);
@@ -35,11 +36,11 @@ size_t wfq_capacity(wfqueue_t *q);
 
 ```c++
 
-#define WFQ_EXPANDABLE 1 // comment it if you only want fixed size
 #include "wfqueue.h"
 
-// total will be PRE_ALLOC_SIZE * NUMBER_OF_EXPAND, expand only use
-wfqueue_t *q = wfq_create(PRE_ALLOC_SIZE, NUMBER_OF_EXPAND); 
+
+// Fixed size of queue, it should at least 2 times more than the number of concurrency level.
+wfqueue_t *q = wfq_create(fixed_sz); 
 
 // wrap in to thread
 wfq_enq(q, new ClassVal); // or malloc if c programming, return 1 if success enqueue
@@ -62,11 +63,10 @@ wfq_destroy(q);
 
 ```c
 
-#define WFQ_EXPANDABLE 1 // comment it if you only want fixed size
 #include "wfqueue.h"
 
-// total will be PRE_ALLOC_SIZE * NUMBER_OF_EXPAND, expand only use
-wfqueue_t *q = wfq_create(PRE_ALLOC_SIZE, NUMBER_OF_EXPAND); 
+// Fixed size of queue, it should at least 2 times more than the number of concurrency level.
+wfqueue_t *q = wfq_create(fixed_sz); 
 
 // wrap in to thread
 wfq_enq(q, malloc(sizeof(ClassVal)); // or malloc if c programming, return 1 if success enqueue
@@ -99,8 +99,8 @@ include header file in your project
 class MyQueue {
 	wfqueue_t *q;
 public:
-	MyQueue ( size_t sz, size_t number_of_expand ) {
-		q = wfq_create(sz, number_of_expand);
+	MyQueue ( size_t sz ) {
+		q = wfq_create(sz);
 	}
 	inline int enq(Xclass *val) {
 		return wfq_enq(q, val);
