@@ -112,7 +112,7 @@ int main(int argc, char* argv[]) {
     if (n > 1) {
         int NUM_PRODUCER = n;
         int NUM_CONSUMER = n;
-        int running_set = 5;
+        int running_set = 50;
 
         for (i = 0; i < running_set; i++) {
             ret = running_wfq_test(NUM_PRODUCER, NUM_CONSUMER, 0, 0, NUM_PRODUCER + NUM_CONSUMER, "MPMC");
