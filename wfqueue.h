@@ -277,10 +277,9 @@ wfq_destroy(wfqueue_t *q) {
 *  WFQ FIXED SIZE wait free queue, it is faster a bit but size are fixed
 *
 */
+// #define WFQ_UNSET_INDEX (size_t) -1
 
 typedef struct {
-    volatile size_t nenq;
-    volatile size_t ndeq;
     volatile size_t count;
     volatile size_t head;
     volatile size_t tail;
@@ -301,12 +300,11 @@ wfq_create(size_t fixed_size) {
         perror("malloc");
         exit(EXIT_FAILURE);
     }
-    q->nenq = 0;
-    q->ndeq = 0;
     q->count = 0;
     q->head = 0;
     q->tail = 0;
-    q->nptr = (void**)malloc(fixed_size * sizeof(void*));
+    q->nptr = (void**)malloc( fixed_size * sizeof(void*));
+
     if (!q->nptr) {
         perror("malloc");
         exit(EXIT_FAILURE);
@@ -320,51 +318,41 @@ wfq_create(size_t fixed_size) {
 
 static int
 wfq_enq(wfqueue_t *q, void* val) {
-    size_t nenq, head, max;
+    size_t  head, max;
+    max = q->max;
+
     __WFQ_SYNC_MEMORY_();
-    nenq = __WFQ_FETCH_ADD_(&q->nenq, 1);
-    max = __WFQ_FETCH_ADD_(&q->max, 0);
-    if ((__WFQ_FETCH_ADD_(&q->count, 0)) < (max - nenq)) {
+    if ( __WFQ_FETCH_ADD_(&q->count, 1) >= max ) {
+      __WFQ_FETCH_ADD_(&q->count, -1);
+      return 0;
+    } else {
         head = __WFQ_FETCH_ADD_(&q->head, 1);
-        head %= max;
-        if (__WFQ_CAS_(q->nptr + head, NULL, val)) {
-            __WFQ_FETCH_ADD_(&q->count, 1);
-            __WFQ_FETCH_ADD_(&q->nenq, -1);
+        if (__WFQ_CAS_(q->nptr + (head%max), NULL, val)) {
             return 1;
         }
+          __WFQ_FETCH_ADD_(&q->count, -1);
+        return 0;
+        // assert(0 && "incorrect number of head, it shouldn't reach here");
     }
-
-    __WFQ_FETCH_ADD_(&q->nenq, -1);
-    return 0;
 }
 
 static void*
 wfq_deq(wfqueue_t *q) {
-    size_t ndeq, tail, max;
+    size_t tail, max;
     void *val;
-    int spin = 0;
-
+    max = q->max;
     __WFQ_SYNC_MEMORY_();
-    ndeq = __WFQ_FETCH_ADD_(&q->ndeq, 1);
-    while (__WFQ_FETCH_ADD_(&q->count, 0)  > ndeq) {
-        tail = __WFQ_FETCH_ADD_(&q->tail, 0);
-        max = __WFQ_FETCH_ADD_(&q->max, 0);
-        tail %= max;
-        if ( (val = __WFQ_SWAP_(q->nptr + tail, NULL) ) ) {
-            __WFQ_FETCH_ADD_(&q->tail, 1);
-            __WFQ_FETCH_ADD_(&q->count, -1);
-            __WFQ_FETCH_ADD_(&q->ndeq, -1);
-            return val;
-        }
-        if (++spin == WFQ_MAX_SPIN) {
-            __WFQ_YIELD_THREAD_();
-            spin = 0;
+
+    if ( __WFQ_FETCH_ADD_(&q->count, 0) > 0 ) {
+        tail = __WFQ_FETCH_ADD_(&q->tail, 1);
+        // tail %= max;
+        if ( (val = __WFQ_SWAP_(q->nptr + (tail%max), NULL) ) ) {
+          __WFQ_FETCH_ADD_(&q->count, -1);
+          return val;
         }
     }
-    __WFQ_FETCH_ADD_(&q->ndeq, -1);
     return NULL;
 }
-
 
 static void
 wfq_destroy(wfqueue_t *q) {
@@ -372,9 +360,7 @@ wfq_destroy(wfqueue_t *q) {
     free(q);
 }
 
-
 #endif
-
 
 static inline size_t
 wfq_size(wfqueue_t *q) {

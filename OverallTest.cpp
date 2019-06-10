@@ -17,36 +17,37 @@ typedef struct {
 int TEST_COUNT = 0;
 
 
-void* newval(size_t digit) {
+MyVal* newval(size_t digit) {
     MyVal *data = (MyVal*)malloc(sizeof(MyVal));
     data->v = digit;
-    return (void*) data;
+    return  data;
 }
 
-int running_wfq_test(size_t n_producer, size_t n_cosumer, size_t n_producing, size_t n_cosuming, const size_t total_threads, const char * test_type) {
+int running_wfq_test(size_t n_producer, size_t n_consumer, size_t n_producing, size_t n_cosuming, const size_t total_threads, const char * test_type) {
     size_t i = 0;
     time_t start_t, end_t;
     double diff_t;
 
-    assert ((total_threads >= (n_producer + n_cosumer)) && "not enough thread to test");
+    assert ((total_threads >= (n_producer + n_consumer)) && "not enough thread to test");
 
     std::thread *testThreads = new std::thread[total_threads];
 
     time(&start_t);
 
 
-    wfqueue_t *q = wfq_create(TEST_MAX_INPUT * n_producer);
+    wfqueue_t *q = wfq_create(TEST_MAX_INPUT);
     char *testname = (char*)"Fixed size wfqueue test";
 
     for (i = 0; i < n_producer ; i++) {
         testThreads[i] = std::thread([&](size_t id) {
             int z;
             for (z = 0; z < TEST_MAX_INPUT; z++) {
-                size_t xx = __WFQ_FETCH_ADD_(&n_producing, 1);
-                wfq_enq(q, newval(xx));
+                MyVal* s = newval(__WFQ_FETCH_ADD_(&n_producing, 1));
+
+                while(!wfq_enq(q,s));
                 // wfq_sleep(1);
                 // if (xx % 100000 == 0)
-                //     printf("%u\n", xx);
+                //     printf("%zu\n", xx);
             }
         }, i);
     }
@@ -55,9 +56,9 @@ int running_wfq_test(size_t n_producer, size_t n_cosumer, size_t n_producing, si
             for (;;) {
                 MyVal* s;
                 while ( (s = (MyVal*)wfq_deq(q) )  ) {
-                    // if (s->v % 100000 == 0) {
-                    //     printf("t %d\n", s->v);
-                    // }
+                    if (s->v % 100000 == 0) {
+                        printf("t %zu\n", s->v);
+                    }
                     free(s);
                     __WFQ_FETCH_ADD_(&n_cosuming, 1);
                 }
@@ -89,12 +90,13 @@ int running_wfq_test(size_t n_producer, size_t n_cosumer, size_t n_producing, si
     diff_t = difftime(end_t, start_t);
 
     printf("===Test= %d - %s, test type %s ===\n", ++TEST_COUNT, testname, test_type);
-    printf("======Total Conmsumed = %zu\n", n_cosuming);
+    printf("======Total Producing = %zu\n", n_cosuming);
+    printf("======Total head = %zu\n", q->head);
     printf("Execution time = %f\n", diff_t);
-
     assert(wfq_size(q) == 0 && " still left over queue inside ");
-    assert(q->head == q->tail && " head and tail are in incorrect position ");
-    assert(q->nenq == 0 && q->ndeq == 0 && " enq deq is in still processing? ");
+    // assert(__WFQ_FETCH_ADD_(&q->head, 0) == __WFQ_FETCH_ADD_(&q->tail, 0) && " head and tail are in incorrect position ");
+    
+    // assert(q->nenq == 0 && q->ndeq == 0 && " enq deq is in still processing? ");
 
     wfq_destroy(q);
     return 0;
@@ -110,7 +112,7 @@ int main(int argc, char* argv[]) {
     if (n > 1) {
         int NUM_PRODUCER = n;
         int NUM_CONSUMER = n;
-        int running_set = 50;
+        int running_set = 5;
 
         for (i = 0; i < running_set; i++) {
             ret = running_wfq_test(NUM_PRODUCER, NUM_CONSUMER, 0, 0, NUM_PRODUCER + NUM_CONSUMER, "MPMC");
