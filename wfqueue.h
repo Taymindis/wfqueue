@@ -88,190 +88,6 @@ inline LONG __WFQ_InterlockedExchange(LONG volatile *target, LONG value) {
 #define __WFQ_THREAD_ID_ GetCurrentThreadId
 #endif
 
-#if 0
-
-/*
-*
-*  WFQ Expandable SIZE wait free queue is under code revised and it's not for use at the moment,
-*  it is expandable size with x number of expandable time
-*  to use it just define WFQ_EXPANDABLE on top of the header
-*/
-
-#define WFQ_PENDING_SET_PTR (void **) -1
-
-typedef struct {
-    volatile size_t nenq;
-    volatile size_t ndeq;
-    volatile size_t head;
-    volatile size_t tail;
-    volatile size_t count;
-    size_t max;
-    size_t ttl_max;
-    size_t sets;
-    void ***nptr;
-    void **currset;
-} wfqueue_t;
-
-/*
-*
-*  argument nexpand is x number of time can be expanded
-*
-*/
-static wfqueue_t *wfq_create(size_t size, size_t nexpand);
-static int _wfq_enq_(wfqueue_t *q, size_t headnow, size_t nenq, void* val);
-static void* _wfq_deq_(wfqueue_t *q,  size_t ndeq);
-static void wfq_destroy(wfqueue_t *q);
-
-static wfqueue_t *
-wfq_create(size_t size, size_t nexpand) {
-    size_t i;
-    wfqueue_t *q = (wfqueue_t *)malloc(sizeof(wfqueue_t));
-    if (!q) {
-        perror("malloc");
-        exit(EXIT_FAILURE);
-    }
-    q->nenq = 0;
-    q->ndeq = 0;
-    q->head = 0;
-    q->tail = 0;
-    q->count = 0;
-    q->nptr = (void***)malloc(nexpand * sizeof(void**));
-
-    for (i = 0; i < nexpand; i++) {
-        q->nptr[i] = NULL;
-    }
-
-    q->nptr[0] = (void**) malloc(size * sizeof(void*));
-    if (!q->nptr) {
-        perror("malloc");
-        exit(EXIT_FAILURE);
-    }
-    for (i = 0; i < size; i++) {
-        q->nptr[0][i] = NULL;
-    }
-    q->max = size;
-    q->sets = nexpand;
-    q->ttl_max = nexpand * size;
-    return q;
-}
-
-
-/*
-* add count then enq
-*/
-static int
-_wfq_enq_(wfqueue_t *q, size_t headnow, size_t nenq, void* val) {
-    size_t max, set;
-    int success, spin;
-
-    if (__WFQ_FETCH_ADD_(&q->count, 0) >= (q->ttl_max - nenq)) {
-        fprintf(stderr, "ERROR wfqueue, no more extendable, out of expandable range  ");
-        __WFQ_FETCH_ADD_(&q->nenq, -1);
-        return 0;
-    }
-
-    max = q->max;
-    set = headnow % q->ttl_max;
-
-    if (__WFQ_CAS_(&q->nptr[set], NULL, WFQ_PENDING_SET_PTR)) {
-        void **new_ = (void**) malloc(max * sizeof(void*));
-        size_t i;
-        if (!new_) {
-            perror("malloc");
-            exit(EXIT_FAILURE);
-        }
-        for (i = 0; i < max; i++) {
-            new_[i] = NULL;
-        }
-        __WFQ_CAS_(&q->nptr[set], WFQ_PENDING_SET_PTR, new_);
-    }
-
-    for (spin = 1; __WFQ_CAS_(&q->nptr[set], WFQ_PENDING_SET_PTR, WFQ_PENDING_SET_PTR); spin++) {
-        if (spin == WFQ_MAX_SPIN) {
-            __WFQ_YIELD_THREAD_();
-            spin = 0;
-        }
-    }
-    __WFQ_SYNC_MEMORY_();
-
-    //    nenq = __WFQ_FETCH_ADD_(&q->nenq, 1);
-    //    if (count < (max - nenq)) {
-    //        head = __WFQ_FETCH_ADD_(&q->head, 1);
-    headnow %= max;
-    if (__WFQ_CAS_(&q->nptr[set][headnow], NULL, val)) {
-        __WFQ_FETCH_ADD_(&q->count, 1);
-        __WFQ_FETCH_ADD_(&q->nenq, -1);
-        return 1;
-    }
-    __WFQ_FETCH_ADD_(&q->nenq, -1);
-    return 0;
-}
-
-static inline int
-wfq_enq(wfqueue_t *q, void* val) {
-    return _wfq_enq_(q, __WFQ_FETCH_ADD_(&q->head, 1), __WFQ_FETCH_ADD_(&q->nenq, 1), val);
-}
-
-/*
-* Deq first then sub count
-*/
-static void*
-_wfq_deq_(wfqueue_t *q,  size_t ndeq) {
-    size_t max, set;
-    void *val;
-    int spin = 0;
-    size_t tailnow;
-
-    max = q->max;
-
-    __WFQ_SYNC_MEMORY_();
-    while ( __WFQ_FETCH_ADD_(&q->count, 0) > ndeq) {
-        tailnow = __WFQ_FETCH_ADD_(&q->tail, 0);
-        set = (( tailnow % q->ttl_max) / max);
-        if (++spin == WFQ_MAX_SPIN) {
-            __WFQ_YIELD_THREAD_();
-            spin = 0;
-        }
-        if (__WFQ_CAS_(&q->nptr[set], NULL, NULL)) {
-            continue;
-        }
-        if (__WFQ_CAS_(&q->nptr[set], WFQ_PENDING_SET_PTR, WFQ_PENDING_SET_PTR)) {
-            continue;
-        }
-        tailnow %= max ;
-        if ( (val = __WFQ_SWAP_(&q->nptr[set][tailnow], NULL) ) ) {
-            __WFQ_FETCH_ADD_(&q->tail, 1);
-            __WFQ_FETCH_ADD_(&q->count, -1);
-            __WFQ_FETCH_ADD_(&q->ndeq, -1);
-            return val;
-        }
-    }
-    __WFQ_FETCH_ADD_(&q->ndeq, -1);
-    return NULL;
-}
-
-static inline void*
-wfq_deq(wfqueue_t *q) {
-    return _wfq_deq_(q, __WFQ_FETCH_ADD_(&q->ndeq, 1));
-}
-
-static void
-wfq_destroy(wfqueue_t *q) {
-    size_t i;
-    for (i = 0; i < q->sets; i++) {
-        if (!__WFQ_CAS_(q->nptr + i, NULL, NULL) &&
-                !__WFQ_CAS_(q->nptr + i, WFQ_PENDING_SET_PTR, WFQ_PENDING_SET_PTR)
-           ) {
-            free(q->nptr[i]);
-        }
-    }
-    free(q->nptr);
-    free(q);
-}
-
-
-#else
-
 /*
 *
 *  WFQ FIXED SIZE wait free queue, it is faster a bit but size are fixed
@@ -280,6 +96,7 @@ wfq_destroy(wfqueue_t *q) {
 // #define WFQ_UNSET_INDEX (size_t) -1
 
 typedef struct {
+    volatile size_t enq_barrier;
     volatile size_t count;
     volatile size_t head;
     volatile size_t tail;
@@ -300,6 +117,7 @@ wfq_create(size_t fixed_size) {
         perror("malloc");
         exit(EXIT_FAILURE);
     }
+    q->enq_barrier = 0;
     q->count = 0;
     q->head = 0;
     q->tail = 0;
@@ -318,19 +136,23 @@ wfq_create(size_t fixed_size) {
 
 static int
 wfq_enq(wfqueue_t *q, void* val) {
-    size_t  head, max;
+    size_t head, max;
     max = q->max;
 
+    __WFQ_FETCH_ADD_(&q->enq_barrier, 1);
     __WFQ_SYNC_MEMORY_();
     if ( __WFQ_FETCH_ADD_(&q->count, 1) >= max ) {
       __WFQ_FETCH_ADD_(&q->count, -1);
+    __WFQ_FETCH_ADD_(&q->enq_barrier, -1);
       return 0;
     } else {
         head = __WFQ_FETCH_ADD_(&q->head, 1);
         if (__WFQ_CAS_(q->nptr + (head%max), NULL, val)) {
+      __WFQ_FETCH_ADD_(&q->enq_barrier, -1);
             return 1;
         }
           __WFQ_FETCH_ADD_(&q->count, -1);
+        __WFQ_FETCH_ADD_(&q->enq_barrier, -1);
         return 0;
         // assert(0 && "incorrect number of head, it shouldn't reach here");
     }
@@ -338,12 +160,14 @@ wfq_enq(wfqueue_t *q, void* val) {
 
 static void*
 wfq_deq(wfqueue_t *q) {
-    size_t tail, max;
+    size_t tail, max, cnt;
     void *val;
     max = q->max;
+
+    cnt = __WFQ_FETCH_ADD_(&q->count, 0);
     __WFQ_SYNC_MEMORY_();
 
-    if ( __WFQ_FETCH_ADD_(&q->count, 0) > 0 ) {
+    if ( ((int)(cnt - __WFQ_FETCH_ADD_(&q->enq_barrier, 0))) > 0 ) {
         tail = __WFQ_FETCH_ADD_(&q->tail, 1);
         // tail %= max;
         if ( (val = __WFQ_SWAP_(q->nptr + (tail%max), NULL) ) ) {
@@ -360,7 +184,6 @@ wfq_destroy(wfqueue_t *q) {
     free(q);
 }
 
-#endif
 
 static inline size_t
 wfq_size(wfqueue_t *q) {

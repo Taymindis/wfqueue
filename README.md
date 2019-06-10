@@ -19,7 +19,7 @@ VS x64/x86 | [![Build status](https://ci.appveyor.com/api/projects/status/k8rwm0
 ## API 
 ```c
 
-// Fixed size of queue, it should at least 2 times more than the number of concurrency level.
+// Fixed size of queue
 wfqueue_t *wfq_create(size_t fixed_size);
 int wfq_enq(wfqueue_t *q, void* val);
 void* wfq_deq(wfqueue_t *q);
@@ -39,7 +39,7 @@ size_t wfq_capacity(wfqueue_t *q);
 #include "wfqueue.h"
 
 
-// Fixed size of queue, it should at least 2 times more than the number of concurrency level.
+// Fixed size of queue
 wfqueue_t *q = wfq_create(fixed_sz); 
 
 // wrap in to thread
@@ -65,7 +65,7 @@ wfq_destroy(q);
 
 #include "wfqueue.h"
 
-// Fixed size of queue, it should at least 2 times more than the number of concurrency level.
+// Fixed size of queue
 wfqueue_t *q = wfq_create(fixed_sz); 
 
 // wrap in to thread
