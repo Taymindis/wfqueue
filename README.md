@@ -43,10 +43,11 @@ size_t wfq_capacity(wfqueue_t *q);
 wfqueue_t *q = wfq_create(fixed_sz); 
 
 // wrap in to thread
-wfq_enq(q, new ClassVal); // or malloc if c programming, return 1 if success enqueue
+new ClassVal *s = new ClassVal;
+wfq_enq(q, s); // or malloc if c programming, return 1 if success enqueue
 
 // wrap in to thread
-ClassVal *s = (intV*)wfq_deq(q); // return NULL/nullptr if no val consuming
+s = (ClassVal*)wfq_deq(q); // return NULL/nullptr if no val consuming
 
 if(s) {
   s->do_op();
@@ -69,10 +70,11 @@ wfq_destroy(q);
 wfqueue_t *q = wfq_create(fixed_sz); 
 
 // wrap in to thread
-wfq_enq(q, malloc(sizeof(ClassVal)); // or malloc if c programming, return 1 if success enqueue
+ClassVal *s = malloc(sizeof(ClassVal);
+wfq_enq(q, s); // or malloc if c programming, return 1 if success enqueue
 
 // wrap in to thread
-ClassVal *s = (intV*)wfq_deq(q); // return NULL/nullptr if no val consuming
+s = (ClassVal*)wfq_deq(q); // return NULL/nullptr if no val consuming
 
 if(s) {
   s->do_op();
