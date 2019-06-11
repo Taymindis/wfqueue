@@ -44,6 +44,7 @@ extern "C" {
 #if defined __GNUC__ || defined __APPLE__
 #include <stdlib.h>
 #include <stdint.h>
+#include <sched.h>
 #include <unistd.h>
 #include <string.h>
 #define __WFQ_FETCH_ADD_ __sync_fetch_and_add
@@ -88,6 +89,7 @@ inline LONG __WFQ_InterlockedExchange(LONG volatile *target, LONG value) {
 #define __WFQ_THREAD_ID_ GetCurrentThreadId
 #endif
 
+#include <assert.h>
 /*
 *
 *  WFQ FIXED SIZE wait free queue, it is faster a bit but size are fixed
@@ -148,14 +150,17 @@ wfq_enq(wfqueue_t *q, void* val) {
     } else {
         head = __WFQ_FETCH_ADD_(&q->head, 1);
         if (__WFQ_CAS_(q->nptr + (head%max), NULL, val)) {
-      __WFQ_FETCH_ADD_(&q->enq_barrier, -1);
+          __WFQ_FETCH_ADD_(&q->enq_barrier, -1);
             return 1;
         }
-          __WFQ_FETCH_ADD_(&q->count, -1);
-        __WFQ_FETCH_ADD_(&q->enq_barrier, -1);
-        return 0;
-        // assert(0 && "incorrect number of head, it shouldn't reach here");
+//          __WFQ_FETCH_ADD_(&q->count, -1);
+//        __WFQ_FETCH_ADD_(&q->enq_barrier, -1);
+////        return 0;
+//        printf("Exit ERRRRRRRRRRR");
+//        exit(-1);
+        assert(0 && "Error, incorrect number of head, it shouldn't reach here");
     }
+    return 0;
 }
 
 static void*
@@ -168,10 +173,11 @@ wfq_deq(wfqueue_t *q) {
     __WFQ_SYNC_MEMORY_();
 
     if ( ((int)(cnt - __WFQ_FETCH_ADD_(&q->enq_barrier, 0))) > 0 ) {
-        tail = __WFQ_FETCH_ADD_(&q->tail, 1);
+        tail = __WFQ_FETCH_ADD_(&q->tail, 0);
         // tail %= max;
         if ( (val = __WFQ_SWAP_(q->nptr + (tail%max), NULL) ) ) {
-          __WFQ_FETCH_ADD_(&q->count, -1);
+            __WFQ_FETCH_ADD_(&q->tail, 1);
+            __WFQ_FETCH_ADD_(&q->count, -1);
           return val;
         }
     }
