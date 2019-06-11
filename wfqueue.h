@@ -153,12 +153,12 @@ wfq_enq(wfqueue_t *q, void* val) {
           __WFQ_FETCH_ADD_(&q->enq_barrier, -1);
             return 1;
         }
-//          __WFQ_FETCH_ADD_(&q->count, -1);
-//        __WFQ_FETCH_ADD_(&q->enq_barrier, -1);
-////        return 0;
+        __WFQ_FETCH_ADD_(&q->count, -1);
+        __WFQ_FETCH_ADD_(&q->enq_barrier, -1);
+        return 0;
 //        printf("Exit ERRRRRRRRRRR");
 //        exit(-1);
-        assert(0 && "Error, incorrect number of head, it shouldn't reach here");
+      //  assert(0 && "Error, incorrect number of head, it shouldn't reach here");
     }
     return 0;
 }
@@ -173,10 +173,8 @@ wfq_deq(wfqueue_t *q) {
     __WFQ_SYNC_MEMORY_();
 
     if ( ((int)(cnt - __WFQ_FETCH_ADD_(&q->enq_barrier, 0))) > 0 ) {
-        tail = __WFQ_FETCH_ADD_(&q->tail, 0);
-        // tail %= max;
+        tail = __WFQ_FETCH_ADD_(&q->tail, 1);
         if ( (val = __WFQ_SWAP_(q->nptr + (tail%max), NULL) ) ) {
-            __WFQ_FETCH_ADD_(&q->tail, 1);
             __WFQ_FETCH_ADD_(&q->count, -1);
           return val;
         }
