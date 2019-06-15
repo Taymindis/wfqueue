@@ -1,11 +1,31 @@
-language: c++
+matrix:
+  include:
+    - language: c
 
-compiler:
-  - g++
-  - clang++
+      compiler:
+        - gcc
+        - clang
 
-before_script:
-  - $TRAVIS_COMPILER -Wall -std=c++11 -I./ OverallTest.cpp -pthread -o overalltest_fixed_sz
+      before_script:
+        - if [[ "$TRAVIS_COMPILER" == "gcc" ]]; then gcc -Wall -I./ main_test.c -pthread -o test fi
+        - if [[ "$TRAVIS_COMPILER" == "clang" ]]; then clang -Wall -I./ main_test.c -pthread -o test fi
 
-script: ./overalltest_fixed_sz
+      script:
+        - ./test
 
+    - language: c++
+
+      compiler:
+        - g++
+        - clang++
+
+      before_script:
+        - if [[ "$TRAVIS_COMPILER" == "g++" ]]; then g++ -Wall -std=c++11 -I./ MainTest.cpp -pthread -o test fi
+        - if [[ "$TRAVIS_COMPILER" == "clang++" ]]; then clang++ -Wall -std=c++11 -I./ MainTest.cpp -pthread -o test fi
+
+      script:
+        - ./test
+
+notifications:
+  email:
+    - minikawoon99@gmail.com

@@ -19,8 +19,13 @@ VS x64/x86 | [![Build status](https://ci.appveyor.com/api/projects/status/k8rwm0
 ## API 
 ```c
 
-// Fixed size of queue
-wfqueue_t *wfq_create(size_t fixed_size);
+/*
+ * max_size - maximum size
+ * max_producer - maximum enqueue/produce threads 
+ * max_consumer - maximum dequeue/consume threads 
+ *
+ */
+wfqueue_t *wfq_create(size_t max_sz, size_t max_producer, size_t max_consumer);
 int wfq_enq(wfqueue_t *q, void* val);
 void* wfq_deq(wfqueue_t *q);
 void wfq_destroy(wfqueue_t *q);

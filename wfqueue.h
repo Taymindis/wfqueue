@@ -92,98 +92,170 @@ inline LONG __WFQ_InterlockedExchange(LONG volatile *target, LONG value) {
 #include <assert.h>
 /*
 *
-*  WFQ FIXED SIZE wait free queue, it is faster a bit but size are fixed
+*  WFQ FIXED SIZE wait free queue
 *
 */
-// #define WFQ_UNSET_INDEX (size_t) -1
+#define _WFQ_UNSET_TAIL_ (size_t) -1
 
 typedef struct {
-    volatile size_t enq_barrier;
-    volatile size_t count;
-    volatile size_t head;
-    volatile size_t tail;
-    volatile size_t max;
+    size_t volatile count;
+    size_t volatile head;
+    size_t volatile tail;
+    size_t volatile *failed_heads;
+    size_t volatile *failed_tails;
+    size_t volatile failed_head_sz;
+    size_t volatile failed_tail_sz;
+    size_t max;
+    size_t nconsumer;
+    size_t nproducer;
     void **nptr;
 } wfqueue_t;
 
-static wfqueue_t *wfq_create(size_t fixed_size);
+/*
+ * max_size - maximum size
+ * max_producer - maximum enqueue/produce threads
+ * max_consumer - maximum dequeue/consume threads
+ *
+ */
+static wfqueue_t *wfq_create(size_t max_sz, size_t max_producer, size_t max_consumer);
 static int wfq_enq(wfqueue_t *q, void* val);
 static void* wfq_deq(wfqueue_t *q);
 static void wfq_destroy(wfqueue_t *q);
 
 static wfqueue_t *
-wfq_create(size_t fixed_size) {
+wfq_create(size_t max_sz, size_t max_producer, size_t max_consumer) {
     size_t i;
     wfqueue_t *q = (wfqueue_t *)malloc(sizeof(wfqueue_t));
     if (!q) {
         perror("malloc");
         exit(EXIT_FAILURE);
     }
-    q->enq_barrier = 0;
+    q->nproducer = max_producer;
+    q->nconsumer = max_consumer;
+    q->failed_tail_sz = 0;
+    q->failed_head_sz = 0;
     q->count = 0;
     q->head = 0;
     q->tail = 0;
-    q->nptr = (void**)malloc( fixed_size * sizeof(void*));
+    q->nptr = (void**)malloc( max_sz * sizeof(void*));
+    q->failed_tails = (size_t*)malloc( q->nconsumer * sizeof(size_t));
+    q->failed_heads = (size_t*)malloc( q->nproducer * sizeof(size_t));
 
-    if (!q->nptr) {
+    if (!q->nptr && !q->failed_tails) {
         perror("malloc");
         exit(EXIT_FAILURE);
     }
-    for (i = 0; i < fixed_size; i++) {
+    for (i = 0; i < max_sz; i++) {
         q->nptr[i] = NULL;
     }
-    q->max = fixed_size;
+    for (i = 0; i < q->nproducer; i++) {
+        q->failed_heads[i] = _WFQ_UNSET_TAIL_;
+    }
+    for (i = 0; i < q->nconsumer; i++) {
+        q->failed_tails[i] = _WFQ_UNSET_TAIL_;
+    }
+
+    q->max = max_sz;
     return q;
+}
+
+static inline void wfq_enq_must(wfqueue_t *q, void* val) {
+    while (!wfq_enq(q, val))
+        ;
+}
+
+static inline void *wfq_deq_must(wfqueue_t *q) {
+    void *_v;
+    while (!(_v = wfq_deq(q)))
+        ;
+    return _v;
 }
 
 static int
 wfq_enq(wfqueue_t *q, void* val) {
-    size_t head, max;
+    size_t head, max, __ind, nproducer;
     max = q->max;
+    nproducer = q->nproducer;
 
-    __WFQ_FETCH_ADD_(&q->enq_barrier, 1);
     __WFQ_SYNC_MEMORY_();
-    if ( __WFQ_FETCH_ADD_(&q->count, 1) >= max ) {
-      __WFQ_FETCH_ADD_(&q->count, -1);
-    __WFQ_FETCH_ADD_(&q->enq_barrier, -1);
-      return 0;
+    for (__ind = 0; __WFQ_FETCH_ADD_(&q->failed_head_sz, 0) && __ind < nproducer; __ind++) {
+        if ( (head = __WFQ_SWAP_(q->failed_heads + __ind, _WFQ_UNSET_TAIL_) ) != _WFQ_UNSET_TAIL_ ) {
+            __WFQ_FETCH_ADD_(&q->failed_head_sz, -1);
+            goto ENQ;
+        }
+    }
+
+    if (__ind == nproducer && __WFQ_FETCH_ADD_(&q->failed_head_sz, 0)) {
+        // Retry too busy threads
+        return 0;
     } else {
         head = __WFQ_FETCH_ADD_(&q->head, 1);
-        if (__WFQ_CAS_(q->nptr + (head%max), NULL, val)) {
-          __WFQ_FETCH_ADD_(&q->enq_barrier, -1);
+    }
+
+    if ( __WFQ_FETCH_ADD_(&q->count, 1) < max) {
+ENQ:
+        if (__WFQ_CAS_(q->nptr + (head % max), NULL, val)) {
             return 1;
         }
-        __WFQ_FETCH_ADD_(&q->count, -1);
-        __WFQ_FETCH_ADD_(&q->enq_barrier, -1);
-        return 0;
-//        printf("Exit ERRRRRRRRRRR");
-//        exit(-1);
-      //  assert(0 && "Error, incorrect number of head, it shouldn't reach here");
     }
+
+    __WFQ_FETCH_ADD_(&q->failed_head_sz, 1);
+
+    for (__ind = 0; __ind < nproducer; __ind++) {
+        if (__WFQ_CAS_(q->failed_heads + __ind, _WFQ_UNSET_TAIL_, head)) {
+            return 0;
+        }
+    }
+
+    assert(__ind != nproducer);
+
     return 0;
 }
 
 static void*
 wfq_deq(wfqueue_t *q) {
-    size_t tail, max, cnt;
+    size_t tail, max, __ind, nconsumer;
     void *val;
     max = q->max;
+    nconsumer = q->nconsumer;
 
-    cnt = __WFQ_FETCH_ADD_(&q->count, 0);
     __WFQ_SYNC_MEMORY_();
-
-    if ( ((int)(cnt - __WFQ_FETCH_ADD_(&q->enq_barrier, 0))) > 0 ) {
-        tail = __WFQ_FETCH_ADD_(&q->tail, 1);
-        if ( (val = __WFQ_SWAP_(q->nptr + (tail%max), NULL) ) ) {
-            __WFQ_FETCH_ADD_(&q->count, -1);
-          return val;
+    for (__ind = 0; __WFQ_FETCH_ADD_(&q->failed_tail_sz, 0) && __ind < nconsumer; __ind++) {
+        if ( (tail = __WFQ_SWAP_(q->failed_tails + __ind, _WFQ_UNSET_TAIL_) ) != _WFQ_UNSET_TAIL_ ) {
+            __WFQ_FETCH_ADD_(&q->failed_tail_sz, -1);
+            goto DEQ;
         }
     }
+
+    if (__ind == nconsumer && __WFQ_FETCH_ADD_(&q->failed_tail_sz, 0)) {
+        // Retry too busy threads
+        return NULL;
+    } else {
+        tail = __WFQ_FETCH_ADD_(&q->tail, 1);
+    }
+DEQ:
+    if ( tail < __WFQ_FETCH_ADD_(&q->head, 0) ) {
+        if ( (val = __WFQ_SWAP_(q->nptr + (tail % max), NULL) ) ) {
+            __WFQ_FETCH_ADD_(&q->count, -1);
+            return val;
+        }
+    }
+
+    __WFQ_FETCH_ADD_(&q->failed_tail_sz, 1);
+    for (__ind = 0; __ind < nconsumer; __ind++) {
+        if (__WFQ_CAS_(q->failed_tails + __ind, _WFQ_UNSET_TAIL_, tail)) {
+            return NULL;
+        }
+    }
+    assert(__ind != nconsumer);
+
     return NULL;
 }
 
 static void
 wfq_destroy(wfqueue_t *q) {
+    free((void*) q->failed_heads);
+    free((void*) q->failed_tails);
     free(q->nptr);
     free(q);
 }
@@ -202,5 +274,6 @@ wfq_capacity(wfqueue_t *q) {
 #ifdef __cplusplus
 }
 #endif
+
 
 #endif
