@@ -1,6 +1,6 @@
 <p align="left"><img src="wfqueue_logo.png" alt="wfqueue logo" /></p>
 
-# wfqueue.h
+# wfqueue.h [![Build Status](https://travis-ci.org/Taymindis/wfqueue.svg?branch=master)](https://travis-ci.org/Taymindis/wfqueue)
 
 c/c++ FIFO wait-free queue, easy built cross platform(no extra dependencies needed) 
 
@@ -9,9 +9,9 @@ Guarantee thread safety memory management, and it's all in one header only, as f
 
 # All Platform tests
 
-GCC/CLANG/G++/CLANG++
+GCC/CLANG/G++/CLANG++ | [![Build Status](https://travis-ci.org/Taymindis/wfqueue.svg?branch=master)](https://travis-ci.org/Taymindis/wfqueue)
 
-VS x64/x86
+VS x64/x86 | [![Build status](https://ci.appveyor.com/api/projects/status/k8rwm0cyfd4tq481?svg=true)](https://ci.appveyor.com/project/Taymindis/wfqueue)
 
 
 #### support MPSC, MCSP only

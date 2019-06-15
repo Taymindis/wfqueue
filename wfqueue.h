@@ -276,4 +276,54 @@ wfq_capacity(wfqueue_t *q) {
 #endif
 
 
+
+// For C++
+#ifdef __cplusplus
+
+#include <iostream>
+#include <cstring>
+
+namespace tWaitFree {
+
+template <class T>
+class Queue {
+private:
+    wfqueue_t *q;
+
+public:
+    Queue(size_t sz, size_t nProducer, size_t nConsumer) {
+        q = wfq_create(sz, nProducer, nConsumer);
+    }
+
+    inline bool enq(T *v) {
+        return wfq_enq(q, (void*)v);
+    }
+
+    inline void enqMust(T *v) {
+        wfq_enq_must(q, (void*)v);
+    }
+
+    inline T* deq() {
+        return (T*) wfq_deq(q);
+    }
+
+    inline T* deqMust() {
+        return (T*) wfq_deq_must(q);
+    }
+
+    bool empty() const {
+        return wfq_size(q) == 0;
+    }
+
+    ~Queue() {
+        wfq_destroy(q);
+    }
+};
+
+}
+
+#endif
+// End for C++
+
+
 #endif

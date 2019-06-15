@@ -1,5 +1,5 @@
 /*
- * compile : g++ -DWFQ_EXPANDABLE=1 -std=c++11 -I./ OverallTest.cpp -pthread -Wall -o overalltest
+ * compile : g++ -std=c++11 -I./ OverallTest.cpp -pthread -Wall -o overalltest
  * execute
  * valgrind --fair-sched=yes ./overalltest
  */
@@ -11,7 +11,7 @@
 #include "wfqueue.h"
 #include <assert.h>
 
-#define MILLION  1000000/10
+#define MILLION  1000000
 #define TEST_MAX_INPUT  MILLION
 
 typedef struct {
