@@ -57,9 +57,9 @@ void * consuming_fn(void *v) {
     for (;;) {
         MyVal* s;
         while ( (s = (MyVal*)wfq_deq(q) )  ) {
-            if (s->v % 100000 == 0) {
-                printf("t %zu\n", s->v);
-            }
+            // if (s->v % 100000 == 0) {
+            //     printf("t %zu\n", s->v);
+            // }
             free(s);
             __WFQ_FETCH_ADD_(&config->nConsuming, 1);
         }

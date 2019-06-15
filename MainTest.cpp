@@ -56,9 +56,9 @@ int running_wfq_test(size_t n_producer, size_t n_consumer, const size_t total_th
             for (;;) {
                 MyVal *s;
                 while ( ( s = queue.deq() ) ) {
-                    if (s->v % 100000 == 0) {
-                        printf("t %zu\n", s->v);
-                    }
+                    // if (s->v % 100000 == 0) {
+                    //     printf("t %zu\n", s->v);
+                    // }
                     __WFQ_FETCH_ADD_(&totalConsuming, 1);
                     delete s;
                 }
