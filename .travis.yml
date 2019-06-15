@@ -3,7 +3,6 @@ matrix:
     - language: c
 
       compiler:
-        - gcc
         - clang
 
       before_script:
