@@ -32,6 +32,11 @@ void wfq_destroy(wfqueue_t *q);
 size_t wfq_size(wfqueue_t *q);
 size_t wfq_capacity(wfqueue_t *q);
 
+// Guarantee enqueue 
+void wfq_enq_must(wfqueue_t *q, void* val);
+// Guarantee Dequeue
+void *wfq_deq_must(wfqueue_t *q);
+
 ```
 
 

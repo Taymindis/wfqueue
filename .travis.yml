@@ -1,28 +1,81 @@
+
+sudo: false
+language: generic
+
+cache:
+  apt: true
+
 matrix:
   include:
-    - language: c
-
-      compiler:
-        - clang
-
+    - env: CXX=g++-5 CC=gcc-5
+      addons:
+        apt:
+          packages:
+            - g++-5
+          sources: &sources
+            - ubuntu-toolchain-r-test
+            - llvm-toolchain-precise
+            - llvm-toolchain-precise-3.7
+            - llvm-toolchain-precise-3.6
+      
       before_script:
-        - $TRAVIS_COMPILER -Wall -I./ main_test.c -pthread -o test
+        - $(CXX) -Wall -I./ main_test.c -pthread -o test
 
       script:
         - ./test
 
-    - language: c++
-
-      compiler:
-        - g++
-        - clang++
-
+    - env: CXX=g++-4.9 CC=gcc-4.9
+      addons:
+        apt:
+          packages:
+            - g++-4.9
+          sources: *sources
+      
       before_script:
-        - $TRAVIS_COMPILER -Wall -std=c++11 -I./ MainTest.cpp -pthread -o test
+        - $(CXX) -Wall -I./ main_test.c -pthread -o test
 
       script:
         - ./test
 
+    - env: CXX=clang++-3.8 CC=clang-3.8
+      addons:
+        apt:
+          packages:
+            - clang-3.8
+          sources: *sources
+      
+      before_script:
+        - $(CXX) -Wall -I./ main_test.c -pthread -o test
+
+      script:
+        - ./test
+
+    - env: CXX=clang++-3.7 CC=clang-3.7
+      addons:
+        apt:
+          packages:
+            - clang-3.7
+          sources: *sources
+      
+      before_script:
+        - $(CXX) -Wall -I./ main_test.c -pthread -o test
+
+      script:
+        - ./test
+
+    - env: CXX=clang++-3.6 CC=clang-3.6
+      addons:
+        apt:
+          packages:
+            - clang-3.6
+          sources: *sources
+      
+      before_script:
+        - $(CXX) -Wall -I./ main_test.c -pthread -o test
+
+      script:
+        - ./test
+        
 notifications:
   email:
     - minikawoon99@gmail.com
