@@ -7,8 +7,7 @@ matrix:
         - clang
 
       before_script:
-        - if [[ "$TRAVIS_COMPILER" == "gcc" ]]; then gcc -Wall -I./ main_test.c -pthread -o test fi
-        - if [[ "$TRAVIS_COMPILER" == "clang" ]]; then clang -Wall -I./ main_test.c -pthread -o test fi
+        - $TRAVIS_COMPILER -Wall -I./ main_test.c -pthread -o test
 
       script:
         - ./test
@@ -20,8 +19,7 @@ matrix:
         - clang++
 
       before_script:
-        - if [[ "$TRAVIS_COMPILER" == "g++" ]]; then g++ -Wall -std=c++11 -I./ MainTest.cpp -pthread -o test fi
-        - if [[ "$TRAVIS_COMPILER" == "clang++" ]]; then clang++ -Wall -std=c++11 -I./ MainTest.cpp -pthread -o test fi
+        - $TRAVIS_COMPILER -Wall -std=c++11 -I./ MainTest.cpp -pthread -o test
 
       script:
         - ./test
