@@ -11,7 +11,6 @@ Guarantee thread safety memory management, and it's all in one header only, as f
 
 GCC/CLANG/G++/CLANG++ | [![Build Status](https://travis-ci.org/Taymindis/wfqueue.svg?branch=master)](https://travis-ci.org/Taymindis/wfqueue)
 
-VS x64/x86 | [![Build status](https://ci.appveyor.com/api/projects/status/k8rwm0cyfd4tq481?svg=true)](https://ci.appveyor.com/project/Taymindis/wfqueue)
 
 
 #### support MPSC, MCSP only

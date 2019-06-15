@@ -8,7 +8,7 @@
 #include <assert.h>
 #include <thread>
 #include "wfqueue.h"
-static const int MILLION = 1000000/100;
+static const int MILLION = 1000000;
 static const int TEST_MAX_INPUT = MILLION;
 
 struct MyVal{
@@ -110,7 +110,7 @@ int main(void) {
     if (n > 1) {
         int NUM_PRODUCER = n;
         int NUM_CONSUMER = n;
-        int running_set = 1;
+        int running_set = 50;
         
         for (i = 0; i < running_set; i++) {
             ret = running_wfq_test(NUM_PRODUCER, NUM_CONSUMER, NUM_PRODUCER + NUM_CONSUMER, "MPMC");
