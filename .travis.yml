@@ -19,7 +19,8 @@ matrix:
             - llvm-toolchain-precise-3.6
       
       before_script:
-        - $(CXX) -Wall -I./ main_test.c -pthread -o test
+        - $(CC) -I./ main_test.c -pthread -o test
+        - $(CXX) -std=c++11 -I./ MainTest.cpp -pthread -o test
 
       script:
         - ./test
@@ -32,7 +33,8 @@ matrix:
           sources: *sources
       
       before_script:
-        - $(CXX) -Wall -I./ main_test.c -pthread -o test
+        - $(CC) -I./ main_test.c -pthread -o test
+        - $(CXX) -std=c++11 -I./ MainTest.cpp -pthread -o test
 
       script:
         - ./test
@@ -45,7 +47,8 @@ matrix:
           sources: *sources
       
       before_script:
-        - $(CXX) -Wall -I./ main_test.c -pthread -o test
+        - $(CC) -I./ main_test.c -pthread -o test
+        - $(CXX) -std=c++11 -I./ MainTest.cpp -pthread -o test
 
       script:
         - ./test
@@ -58,7 +61,8 @@ matrix:
           sources: *sources
       
       before_script:
-        - $(CXX) -Wall -I./ main_test.c -pthread -o test
+        - $(CC) -I./ main_test.c -pthread -o test
+        - $(CXX) -std=c++11 -I./ MainTest.cpp -pthread -o test
 
       script:
         - ./test
@@ -71,11 +75,12 @@ matrix:
           sources: *sources
       
       before_script:
-        - $(CXX) -Wall -I./ main_test.c -pthread -o test
+        - $(CC) -I./ main_test.c -pthread -o test
+        - $(CXX) -std=c++11 -I./ MainTest.cpp -pthread -o test
 
       script:
         - ./test
-        
+
 notifications:
   email:
     - minikawoon99@gmail.com
