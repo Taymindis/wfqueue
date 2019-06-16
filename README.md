@@ -107,6 +107,9 @@ wfq_destroy(q);
 
 include header file in your project
 
+## Next feature target
+
+No fixed size (expandable size)
 
 ## You may also like lock free queue FIFO
 
