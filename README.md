@@ -109,7 +109,7 @@ include header file in your project
 
 ## Next feature target
 
-No fixed size (expandable size)
+No pre allocated size needed, it will expand itself (expandable size)
 
 ## You may also like lock free queue FIFO
 
