@@ -111,10 +111,10 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="..\OverallTest.cpp" />
+    <ClInclude Include="..\wfqueue.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\wfqueue.h" />
+    <ClCompile Include="..\MainTest.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

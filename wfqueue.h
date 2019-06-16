@@ -59,15 +59,15 @@ extern "C" {
 inline bool ___WFQ_CAS_64(LONG64 volatile *x, LONG64 y, LONG64 z) {
     return InterlockedCompareExchangeNoFence64(x, z, y) == y;
 }
-inline LONG __WFQ_InterlockedExchangeAddNoFence64(LONG64 volatile *target, LONG64 value) {
-    return (LONG) InterlockedExchangeAddNoFence64(target, value);
+inline LONG64 __WFQ_InterlockedExchangeAddNoFence64(LONG64 volatile *target, LONG64 value) {
+    return InterlockedExchangeAddNoFence64(target, value);
 }
 inline LONG64 __WFQ_InterlockedExchange64(LONG64 volatile *target, LONG64 value) {
     return InterlockedExchange64(target, value);
 }
 #define __WFQ_CAS_(x,y,z)  ___WFQ_CAS_64((LONG64 volatile *)x, (LONG64)y, (LONG64)z)
 #define __WFQ_FETCH_ADD_(target, value)  __WFQ_InterlockedExchangeAddNoFence64((LONG64 volatile *)target, (LONG64)value)
-#define __WFQ_SWAP_(target, value) (VOID*)__WFQ_InterlockedExchange64((LONG64 volatile *)target, (LONG64)value)
+#define __WFQ_SWAP_(target, value) __WFQ_InterlockedExchange64((LONG64 volatile *)target, (LONG64)value)
 #else
 inline bool ___WFQ_CAS_(LONG volatile *x, LONG y, LONG z) {
     return InterlockedCompareExchangeNoFence(x, z, y) == y;
@@ -80,7 +80,7 @@ inline LONG __WFQ_InterlockedExchange(LONG volatile *target, LONG value) {
 }
 #define __WFQ_CAS_(x,y,z)  ___WFQ_CAS_((LONG volatile *)x, (LONG)y, (LONG)z)
 #define __WFQ_FETCH_ADD_(target, value) (size_t)__WFQ_InterlockedExchangeAddNoFence((LONG volatile *)target, (LONG)value)
-#define __WFQ_SWAP_(target, value) (VOID*)__WFQ_InterlockedExchange((LONG volatile *)target, (LONG)value)
+#define __WFQ_SWAP_(target, value) __WFQ_InterlockedExchange((LONG volatile *)target, (LONG)value)
 #endif
 // thread
 #include <windows.h>
@@ -235,7 +235,11 @@ wfq_deq(wfqueue_t *q) {
     }
 DEQ:
     if ( tail < __WFQ_FETCH_ADD_(&q->head, 0) ) {
-        if ( (val = __WFQ_SWAP_(q->nptr + (tail % max), NULL) ) ) {
+#if defined __GNUC__ || defined __APPLE__
+		if ( (val = __WFQ_SWAP_(q->nptr + (tail % max), NULL) ) ) {
+#else
+        if ( (val = (void*) __WFQ_SWAP_(q->nptr + (tail % max), NULL) ) ) {
+#endif
             __WFQ_FETCH_ADD_(&q->count, -1);
             return val;
         }
