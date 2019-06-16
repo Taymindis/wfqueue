@@ -11,9 +11,9 @@ Guarantee thread safety memory management, and it's all in one header only, as f
 
 GCC/CLANG/G++/CLANG++ | [![Build Status](https://travis-ci.org/Taymindis/wfqueue.svg?branch=master)](https://travis-ci.org/Taymindis/wfqueue)
 
+VS x64/x86 | [![Build status](https://ci.appveyor.com/api/projects/status/k8rwm0cyfd4tq481?svg=true)](https://ci.appveyor.com/project/Taymindis/wfqueue)
 
-
-#### support MPSC, MCSP only
+#### support MPMC, MPSC and MCSP
 
 ## API 
 ```c
@@ -48,15 +48,22 @@ void *wfq_deq_must(wfqueue_t *q);
 #include "wfqueue.h"
 
 
-// Fixed size of queue
-wfqueue_t *q = wfq_create(fixed_sz); 
+tWaitFree::Queue<MyVal> myqueue(sz, n_producer, n_consumer);
 
 // wrap in to thread
 new ClassVal *s = new ClassVal;
-wfq_enq(q, s); // or malloc if c programming, return 1 if success enqueue
+
+
+// please use enqMust to guarantee enqueue.
+if(myqueue.enq(s)) {
+	printf("%s\n", "Done");
+} else {
+	printf("%s\n", "queue is full, please try again to re-enqueue ");
+}
 
 // wrap in to thread
-s = (ClassVal*)wfq_deq(q); // return NULL/nullptr if no val consuming
+// please use deqMust to guarantee dequeue.
+s = (ClassVal*) myqueue.deq() ; // return NULL/nullptr if no val consuming
 
 if(s) {
   s->do_op();
@@ -64,8 +71,6 @@ if(s) {
   delete s;
 }
 
-
-wfq_destroy(q);
 
 ```
 
@@ -76,14 +81,17 @@ wfq_destroy(q);
 #include "wfqueue.h"
 
 // Fixed size of queue
-wfqueue_t *q = wfq_create(fixed_sz); 
+wfqueue_t *q = wfq_create(sz, n_producer, n_consumer); 
 
 // wrap in to thread
 ClassVal *s = malloc(sizeof(ClassVal);
-wfq_enq(q, s); // or malloc if c programming, return 1 if success enqueue
+
+// wfq_enq_must for guarantee enqueue
+wfq_enq(q, s);
 
 // wrap in to thread
-s = (ClassVal*)wfq_deq(q); // return NULL/nullptr if no val consuming
+// wfq_deq_must for guarantee dequeue
+s = (ClassVal*)wfq_deq(q); // return NULL if no val consuming
 
 if(s) {
   s->do_op();
@@ -98,37 +106,6 @@ wfq_destroy(q);
 ## Build
 
 include header file in your project
-
-
-## Wrap this in your class
-
-#### example 
-
-```c++
-
-
-class MyQueue {
-	wfqueue_t *q;
-public:
-	MyQueue ( size_t sz ) {
-		q = wfq_create(sz);
-	}
-	inline int enq(Xclass *val) {
-		return wfq_enq(q, val);
-	}
-
-	inline Xclass *deq() {
-		return (Xclass*)wfq_deq(q);
-	}
-	inline size_t getSize() {
-		return wfq_size(q);
-	}
-	~MyQueue() {
-		wfq_destroy(q);;
-	}
-}
-
-```
 
 
 ## You may also like lock free queue FIFO
