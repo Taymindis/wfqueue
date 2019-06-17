@@ -132,7 +132,7 @@ int running_wfq_test(size_t arg_producer, size_t arg_consumer, size_t arg_produc
 int main(void) {
     int ret = 0, i;
 
-    unsigned int n = 8;
+    unsigned int n = sysconf(_SC_NPROCESSORS_ONLN); // Linux / MAC OS
 
     if (n > 1) {
         int NUM_PRODUCER = n;
