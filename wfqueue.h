@@ -39,20 +39,13 @@
 extern "C" {
 #endif
 
-#define WFQ_MAX_SPIN 1024
-
 #if defined __GNUC__ || defined __APPLE__
 #include <stdlib.h>
-#include <stdint.h>
-#include <sched.h>
-#include <unistd.h>
-#include <string.h>
 #define __WFQ_FETCH_ADD_ __sync_fetch_and_add
 #define __WFQ_CAS_ __sync_bool_compare_and_swap
 #define __WFQ_SWAP_ __sync_lock_test_and_set
 #define __WFQ_THREAD_ID_ pthread_self
 #define __WFQ_SYNC_MEMORY_ __sync_synchronize
-#define __WFQ_YIELD_THREAD_ sched_yield
 #else
 #include <Windows.h>
 #ifdef _WIN64
@@ -85,7 +78,6 @@ inline LONG __WFQ_InterlockedExchange(LONG volatile *target, LONG value) {
 // thread
 #include <windows.h>
 #define __WFQ_SYNC_MEMORY_ MemoryBarrier
-#define __WFQ_YIELD_THREAD_ SwitchToThread
 #define __WFQ_THREAD_ID_ GetCurrentThreadId
 #endif
 
@@ -127,8 +119,7 @@ wfq_create(size_t max_sz, size_t max_producer, size_t max_consumer) {
     size_t i;
     wfqueue_t *q = (wfqueue_t *)malloc(sizeof(wfqueue_t));
     if (!q) {
-        perror("malloc");
-        exit(EXIT_FAILURE);
+        assert(0 && "malloc error, unable to create wfqueue");
     }
     q->nproducer = max_producer;
     q->nconsumer = max_consumer;
@@ -142,8 +133,7 @@ wfq_create(size_t max_sz, size_t max_producer, size_t max_consumer) {
     q->failed_heads = (size_t*)malloc( q->nproducer * sizeof(size_t));
 
     if (!q->nptr && !q->failed_tails) {
-        perror("malloc");
-        exit(EXIT_FAILURE);
+        assert(0 && "malloc error, unable to create wfqueue");
     }
     for (i = 0; i < max_sz; i++) {
         q->nptr[i] = NULL;

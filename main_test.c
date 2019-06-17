@@ -9,6 +9,7 @@
 #include <pthread.h>
 // #include <thread>
 #include "wfqueue.h"
+#include <unistd.h>
 #include <assert.h>
 
 #define MILLION  1000000
