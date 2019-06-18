@@ -151,13 +151,13 @@ wfq_create(size_t max_sz, size_t max_producer, size_t max_consumer) {
 
 static inline void wfq_enq_must(wfqueue_t *q, void* val) {
     while (!wfq_enq(q, val))
-        ;
+        __WFQ_SYNC_MEMORY_();
 }
 
 static inline void *wfq_deq_must(wfqueue_t *q) {
     void *_v;
     while (!(_v = wfq_deq(q)))
-        ;
+        __WFQ_SYNC_MEMORY_();
     return _v;
 }
 
@@ -289,20 +289,48 @@ public:
         q = wfq_create(sz, nProducer, nConsumer);
     }
 
-    inline bool enq(T *v) {
+    // try enqueue pass by heap memory, value need to be allocated
+    inline bool tryEnq(T *v) {
         return wfq_enq(q, (void*)v);
     }
 
-    inline void enqMust(T *v) {
+    // must enqueue pass by heap memory, value need to be allocated
+    inline void enq(T *v) {
         wfq_enq_must(q, (void*)v);
     }
 
-    inline T* deq() {
+    // must enqueue pass by stack memory
+    inline void enq(T &v) {
+        wfq_enq_must(q, (void*)new T(v));
+    }
+
+    // try dequeue return heap memory, value need to delete
+    inline T* tryDeq() {
         return (T*) wfq_deq(q);
     }
 
-    inline T* deqMust() {
+    // try dequeue return stack memory
+    bool tryDeq(T &v) {
+        T* valHeap;
+        if( (valHeap = (T*) wfq_deq(q)) ) {
+          v = std::move(*valHeap);
+          delete valHeap;
+          return true;
+        }
+        return false;
+    }
+
+    // must dequeue return heap memory, value need to delete
+    inline T* deq() {
         return (T*) wfq_deq_must(q);
+    }
+
+    // must dequeue return stack memory
+    inline void deq(T &v) {
+      T* valHeap;
+      valHeap = (T*) wfq_deq_must(q);
+      v = std::move(*valHeap);
+      delete valHeap;
     }
 
     bool empty() const {
