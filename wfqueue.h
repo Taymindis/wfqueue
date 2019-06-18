@@ -289,27 +289,29 @@ public:
         q = wfq_create(sz, nProducer, nConsumer);
     }
 
-    // try enqueue pass by heap memory, value need to be allocated
+    // try to enqueue with allocated memory as argument
     inline bool tryEnq(T *v) {
         return wfq_enq(q, (void*)v);
     }
 
-    // must enqueue pass by heap memory, value need to be allocated
+    // must have enqueued with allocated memory as argument
     inline void enq(T *v) {
         wfq_enq_must(q, (void*)v);
     }
 
-    // must enqueue pass by stack memory
+    // must have enqueued with Pass-by-reference as argument
     inline void enq(T &v) {
         wfq_enq_must(q, (void*)new T(v));
     }
 
-    // try dequeue return heap memory, value need to delete
+    // try to dequeue and return heap memory, and value need to be deleted
+    // return nullptr if dequeue unsucessfully
     inline T* tryDeq() {
         return (T*) wfq_deq(q);
     }
 
-    // try dequeue return stack memory
+    // try to dequeue with pass by references
+    // return false if dequeue unsucessfully
     bool tryDeq(T &v) {
         T* valHeap;
         if( (valHeap = (T*) wfq_deq(q)) ) {
@@ -320,12 +322,12 @@ public:
         return false;
     }
 
-    // must dequeue return heap memory, value need to delete
+    // must have dequeued and return heap memory, value need to delete
     inline T* deq() {
         return (T*) wfq_deq_must(q);
     }
 
-    // must dequeue return stack memory
+    // must have dequeued with pass by references
     inline void deq(T &v) {
       T* valHeap;
       valHeap = (T*) wfq_deq_must(q);
