@@ -111,7 +111,7 @@ int main(void) {
     if (n > 1) {
         int NUM_PRODUCER = n;
         int NUM_CONSUMER = n;
-        int running_set = 2;
+        int running_set = 50;
 
         for (i = 0; i < running_set; i++) {
             ret = running_wfq_test(NUM_PRODUCER, NUM_CONSUMER, NUM_PRODUCER + NUM_CONSUMER, "MPMC");
