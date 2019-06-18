@@ -17,14 +17,20 @@ matrix:
             - llvm-toolchain-precise
             - llvm-toolchain-precise-3.7
             - llvm-toolchain-precise-3.6
-      
+
       before_script:
+        - wget https://github.com/google/googletest/archive/release-1.8.1.tar.gz
+        - tar -zxvf release-1.8.1.tar.gz -C google_test/
         - $CC -Wall -I./ main_test.c -pthread -o test
         - $CXX -Wall -std=c++11 -I./ MainTest.cpp -pthread -o testpp
 
       script:
         - ./test
         - ./testpp
+        - mkdir google_test/build
+        - cd google_test/build
+        - cmake ..
+        - cmake --build .
 
     - env: CXX=g++-4.9 CC=gcc-4.9
       addons:
@@ -32,7 +38,7 @@ matrix:
           packages:
             - g++-4.9
           sources: *sources
-      
+
       before_script:
         - $CC -Wall -I./ main_test.c -pthread -o test
         - $CXX -Wall -std=c++11 -I./ MainTest.cpp -pthread -o testpp
@@ -47,7 +53,7 @@ matrix:
           packages:
             - clang-3.8
           sources: *sources
-      
+
       before_script:
         - $CC -Wall -I./ main_test.c -pthread -o test
         - $CXX -Wall -std=c++11 -I./ MainTest.cpp -pthread -o testpp
@@ -62,7 +68,7 @@ matrix:
           packages:
             - clang-3.7
           sources: *sources
-      
+
       before_script:
         - $CC -Wall -I./ main_test.c -pthread -o test
         - $CXX -Wall -std=c++11 -I./ MainTest.cpp -pthread -o testpp
@@ -77,7 +83,7 @@ matrix:
           packages:
             - clang-3.6
           sources: *sources
-      
+
       before_script:
         - $CC -Wall -I./ main_test.c -pthread -o test
         - $CXX -Wall -std=c++11 -I./ MainTest.cpp -pthread -o testpp
