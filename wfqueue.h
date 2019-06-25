@@ -220,7 +220,7 @@ wfq_enq(wfqueue_t *q, void* val, wfq_enq_ctx_t *ctx) {
         return 0;
     }
 
-    head = __WFQ_FETCH_ADD_(&q->head, 1, __ATOMIC_ACQUIRE) % q->max;
+    head = __WFQ_FETCH_ADD_(&q->head, 1, __ATOMIC_RELAXED) % q->max;
     for (n = _WFQ_MAX_TRY_; n > 0; n--) {
         if (!__WFQ_LOAD_(q->nptr + head, __ATOMIC_CONSUME) &&
                 __WFQ_CAS_(q->nptr + head, NULL, val, __ATOMIC_RELEASE, __ATOMIC_RELAXED)) {
@@ -258,7 +258,7 @@ wfq_deq(wfqueue_t *q, wfq_deq_ctx_t *ctx) {
         return NULL;
     }
 
-    tail = __WFQ_FETCH_ADD_(&q->tail, 1, __ATOMIC_ACQUIRE) % q->max;
+    tail = __WFQ_FETCH_ADD_(&q->tail, 1, __ATOMIC_RELAXED) % q->max;
     for (n = _WFQ_MAX_TRY_; n > 0; n--) {
 #if defined __GNUC__ || defined __APPLE__
         if ( (val = __WFQ_LOAD_(q->nptr + tail, __ATOMIC_CONSUME)) && __WFQ_CAS_(q->nptr + tail, val, NULL, __ATOMIC_RELEASE, __ATOMIC_RELAXED) ) {
