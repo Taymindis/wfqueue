@@ -10,6 +10,7 @@
 #include "wfqueue.h"
 static const int MILLION = 1000000;
 static const int TEST_MAX_INPUT = MILLION;
+#define addcount(x, y) __WFQ_FETCH_ADD_(x, y, __ATOMIC_RELAXED)
 
 struct MyVal{
     size_t v;
@@ -25,27 +26,27 @@ int TEST_COUNT = 0;
 
 int running_wfq_test(size_t n_producer, size_t n_consumer, const size_t total_threads, const char * test_type) {
     size_t i = 0;
-    time_t start_t, end_t;
-    double diff_t;
     size_t totalProducing = 0, totalConsuming = 0;
 
     assert((total_threads >= (n_producer + n_consumer)) && "not enough thread to test");
 
     std::thread *testThreads = new std::thread[total_threads];
 
-    time(&start_t);
 
-    tWaitFree::Queue<MyVal> queue(TEST_MAX_INPUT, n_producer, n_consumer);
+    tWaitFree::Queue<MyVal> queue(TEST_MAX_INPUT);
     char *testname = (char*)"Fixed size wfqueue test";
+
+    auto begin = std::chrono::high_resolution_clock::now();
 
     for (i = 0; i < n_producer ; i++) {
         testThreads[i] = std::thread([&](int id) {
             int z;
+            tWaitFree::WfqEnqCtx enqCtx = tWaitFree::InitEnqCtx();
             for (z = 0; z < TEST_MAX_INPUT; z++) {
                 MyVal s;
-                s.v = __WFQ_FETCH_ADD_(&totalProducing, 1);
+                s.v = addcount(&totalProducing, 1);
 
-                queue.enq(s);
+                queue.enq(s, enqCtx);
                 // wfq_sleep(1);
                 // if (xx % 100000 == 0)
                 //     printf("%zu\n", xx);
@@ -54,25 +55,25 @@ int running_wfq_test(size_t n_producer, size_t n_consumer, const size_t total_th
     }
     for (; i < total_threads ; i++) {
         testThreads[i] = std::thread([&](int id) {
+            tWaitFree::WfqDeqCtx deqCtx = tWaitFree::InitDeqCtx();
             for (;;) {
                 MyVal s;
-                while ( queue.tryDeq(s) ) {
+                while ( queue.tryDeq(s, deqCtx) ) {
                     // if (s->v % 100000 == 0) {
                     //     printf("t %zu\n", s->v);
                     // }
-                    __WFQ_FETCH_ADD_(&totalConsuming, 1);
+                    addcount(&totalConsuming, 1);
                     // delete s;
                 }
-                if (__WFQ_FETCH_ADD_(&totalConsuming, 0) >= TEST_MAX_INPUT * (n_producer)) {
+                if (addcount(&totalConsuming, 0) >= TEST_MAX_INPUT * (n_producer)) {
                     break;
                 }
             }
         }, i);
     }
 
-    while (__WFQ_FETCH_ADD_(&totalConsuming, 0) < TEST_MAX_INPUT * (n_producer)) {
-        time(&end_t);
-        if (difftime(end_t, start_t) >= (2 * 60)) { // 2 minute
+    while (addcount(&totalConsuming, 0) < TEST_MAX_INPUT * (n_producer)) {
+        if (std::chrono::duration_cast<std::chrono::seconds>((std::chrono::high_resolution_clock::now() - begin)).count() >= (10 * 60)) { // 2 minute
             assert(0 && " too long to consuming the queue");
         }
     }
@@ -83,18 +84,19 @@ int running_wfq_test(size_t n_producer, size_t n_consumer, const size_t total_th
     }
 
 
-    time(&end_t);
+    auto end = std::chrono::high_resolution_clock::now();
 
     delete []testThreads;
 
 
-    diff_t = difftime(end_t, start_t);
+    auto ms = std::chrono::duration_cast<std::chrono::milliseconds>((end - begin)).count();
 
     printf("===Test= %d - %s, test type %s ===\n", ++TEST_COUNT, testname, test_type);
     printf("======Total Producing = %zu\n", totalConsuming);
-    printf("Execution time = %f\n", diff_t);
+    std::cout << "Execution time = " << ms << "ms" << std::endl;
+
     assert( queue.empty() && " still left over queue inside ");
-    // assert(__WFQ_FETCH_ADD_(&q->head, 0) == __WFQ_FETCH_ADD_(&q->tail, 0) && " head and tail are in incorrect position ");
+    // assert(addcount(&q->head, 0) == addcount(&q->tail, 0) && " head and tail are in incorrect position ");
 
     // assert(q->nenq == 0 && q->ndeq == 0 && " enq deq is in still processing? ");
 
@@ -106,12 +108,15 @@ int main(void) {
 
     unsigned int n = std::thread::hardware_concurrency();
     std::cout << n << " Concurrent threads supported \n";
-
+	
+	if ( n <= 2) {
+      n = 4;
+    }
 
     if (n > 1) {
         int NUM_PRODUCER = n;
         int NUM_CONSUMER = n;
-        int running_set = 50;
+        int running_set = 20;
 
         for (i = 0; i < running_set; i++) {
             ret = running_wfq_test(NUM_PRODUCER, NUM_CONSUMER, NUM_PRODUCER + NUM_CONSUMER, "MPMC");
