@@ -44,7 +44,7 @@ extern "C" {
 #if (__GNUC__ >= 4 && __GNUC_MINOR__ > 7) || defined __APPLE__
 #define __WFQ_FETCH_ADD_(ptr, val, order) __atomic_fetch_add(ptr, val, order)
 #define __WFQ_CAS_(ptr, cmp, val, succ_order, failed_order) __sync_bool_compare_and_swap(ptr, cmp, val)
-#define __WFQ_CAS2_(ptr, cmp, val, succ_order, failed_order) __atomic_compare_exchange_n(ptr, cmp, val, 1, succ_order, failed_order)
+#define __WFQ_CAS2_(ptr, cmp, val, succ_order, failed_order) __atomic_compare_exchange_n(ptr, cmp, val, 0, succ_order, failed_order)
 #define __WFQ_SWAP_(ptr, val, order) __atomic_exchange_n(ptr, val, order)
 #define __WFQ_THREAD_ID_ pthread_self
 #define __WFQ_SYNC_MEMORY_() __atomic_thread_fence(__ATOMIC_SEQ_CST)
@@ -112,7 +112,7 @@ inline LONG __WFQ_InterlockedExchange(LONG volatile *target, LONG value) {
 #define __WFQ_THREAD_ID_ GetCurrentThreadId
 #endif
 
-#include <assert.h>
+// #include <assert.h>
 /*
  *
  *  WFQ FIXED SIZE wait free queue
@@ -158,7 +158,8 @@ wfq_create(size_t max_sz) {
     size_t i;
     wfqueue_t *q = (wfqueue_t *)malloc(sizeof(wfqueue_t));
     if (!q) {
-        assert(0 && "malloc error, unable to create wfqueue");
+        // assert(0 && "malloc error, unable to create wfqueue");
+        return NULL;
     }
     // q->count = 0;
     q->head = 0;
@@ -210,18 +211,23 @@ wfq_enq(wfqueue_t *q, void* val, wfq_enq_ctx_t *ctx) {
             if ( !__WFQ_LOAD_(q->nptr + ctx->_qtix, __ATOMIC_CONSUME) &&
                     __WFQ_CAS_(q->nptr + ctx->_qtix, NULL, val, __ATOMIC_RELEASE, __ATOMIC_RELAXED) ) {
                 ctx->_hasq = 0;
+                __WFQ_SYNC_MEMORY_();
                 return 1;
             }
+            __WFQ_SYNC_MEMORY_();
+
         }
         return 0;
     }
 
-    head = __WFQ_FETCH_ADD_(&q->head, 1, __ATOMIC_ACQ_REL) % q->max;
+    head = __WFQ_FETCH_ADD_(&q->head, 1, __ATOMIC_ACQUIRE) % q->max;
     for (n = _WFQ_MAX_TRY_; n > 0; n--) {
         if (!__WFQ_LOAD_(q->nptr + head, __ATOMIC_CONSUME) &&
                 __WFQ_CAS_(q->nptr + head, NULL, val, __ATOMIC_RELEASE, __ATOMIC_RELAXED)) {
+            __WFQ_SYNC_MEMORY_();
             return 1;
         }
+        __WFQ_SYNC_MEMORY_();
     }
 
     ctx->_qtix = head;
@@ -234,26 +240,35 @@ wfq_deq(wfqueue_t *q, wfq_deq_ctx_t *ctx) {
     // ADD_DEBUG_CYC_COUNT;
     size_t tail;
     void *val;
+    int n;
 
     if (ctx->_hasq) {
+        for (n = _WFQ_MAX_TRY_; n > 0; n--) {
 #if defined __GNUC__ || defined __APPLE__
-        if ( (val = __WFQ_SWAP_(q->nptr + ctx->_qtix, NULL, __ATOMIC_ACQ_REL) ) ) {
+            if (  (val = __WFQ_LOAD_(q->nptr + ctx->_qtix, __ATOMIC_CONSUME)) && __WFQ_CAS_(q->nptr + ctx->_qtix, val, NULL, __ATOMIC_RELEASE, __ATOMIC_RELAXED) ) {
 #else
-        if ( (val = (void*) __WFQ_SWAP_(q->nptr + ctx->_qtix, NULL, __ATOMIC_ACQ_REL) ) ) {
+            if ( (val = (void*) __WFQ_SWAP_(q->nptr + ctx->_qtix, NULL, __ATOMIC_ACQ_REL) ) ) {
 #endif
-            ctx->_hasq = 0;
-            return val;
+                ctx->_hasq = 0;
+                __WFQ_SYNC_MEMORY_();
+                return val;
+            }
+            __WFQ_SYNC_MEMORY_();
         }
         return NULL;
     }
 
     tail = __WFQ_FETCH_ADD_(&q->tail, 1, __ATOMIC_ACQUIRE) % q->max;
+    for (n = _WFQ_MAX_TRY_; n > 0; n--) {
 #if defined __GNUC__ || defined __APPLE__
-    if ( (val = __WFQ_SWAP_(&q->nptr[tail], NULL, __ATOMIC_ACQ_REL) ) ) {
+        if ( (val = __WFQ_LOAD_(q->nptr + tail, __ATOMIC_CONSUME)) && __WFQ_CAS_(q->nptr + tail, val, NULL, __ATOMIC_RELEASE, __ATOMIC_RELAXED) ) {
 #else
-    if ( (val = (void*) __WFQ_SWAP_(&q->nptr[tail], NULL, __ATOMIC_ACQ_REL) ) ) {
+        if ( (val = (void*) __WFQ_SWAP_(&q->nptr[tail], NULL, __ATOMIC_ACQ_REL) ) ) {
 #endif
-        return val;
+            __WFQ_SYNC_MEMORY_();
+            return val;
+        }
+        __WFQ_SYNC_MEMORY_();
     }
 
     ctx->_qtix = tail;
@@ -367,11 +382,11 @@ public:
         delete valHeap;
     }
 
-    size_t size() const {
+    inline size_t size() const {
         return wfq_size(q);
     }
 
-    bool empty() const {
+    inline bool empty() const {
         return wfq_size(q) == 0;
     }
 
