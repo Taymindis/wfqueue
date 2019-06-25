@@ -45,39 +45,39 @@ namespace tWaitFree {
 
 WfqEnqCtx InitEnqCtx();
 WfqDeqCtx InitDeqCtx();
+
 /*
  * max_size - maximum size
  */
-
 Queue(size_t max_sz) {
-	  // try to enqueue with allocated memory as argument
+	// try to enqueue with allocated memory as argument
 	bool tryEnq(T *v, WfqEnqCtx &ctx);
 
-	  // must have enqueued with allocated memory as argument
+	// must have enqueued with allocated memory as argument
 	void enq(T *v, WfqEnqCtx &ctx);
 
 	// must have enqueued with allocated memory as argument
 	void enq(T &v, WfqEnqCtx &ctx);
 
-  	// try to dequeue and return heap memory, and value need to be deleted
-    // return nullptr if dequeue unsucessfully
+	// try to dequeue and return heap memory, and value need to be deleted
+	// return nullptr if dequeue unsucessfully
 	T* tryDeq(WfqDeqCtx &ctx);
 
 	// try to dequeue with pass by references
-    // return false if dequeue unsucessfully
-    bool tryDeq(T &v, WfqDeqCtx &ctx);
+	// return false if dequeue unsucessfully
+	bool tryDeq(T &v, WfqDeqCtx &ctx);
 
-    // must have dequeued and return heap memory, value need to delete
-    T* deq(WfqDeqCtx &ctx);
+	// must have dequeued and return heap memory, value need to delete
+	T* deq(WfqDeqCtx &ctx);
 
-    // must have dequeued with pass by references
-    void deq(T &v, WfqDeqCtx &ctx)
+	// must have dequeued with pass by references
+	void deq(T &v, WfqDeqCtx &ctx)
 
-    size_t size();
+	size_t size();
 
-    bool empty();
+	bool empty();
 
-    ~Queue();
+	~Queue();
 }
 
 
