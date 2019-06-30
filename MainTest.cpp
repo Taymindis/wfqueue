@@ -37,7 +37,7 @@ int running_wfq_test(size_t n_producer, size_t n_consumer, const size_t total_th
     std::thread *testThreads = new std::thread[total_threads];
 
 
-    tWaitFree::Queue<MyVal> queue(1024);
+    tWaitFree::Queue<MyVal> queue(TEST_MAX_INPUT);
     char *testname = (char*)"Fixed size wfqueue test";
 
     auto begin = std::chrono::high_resolution_clock::now();
