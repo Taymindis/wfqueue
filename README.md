@@ -15,76 +15,6 @@ VS x64/x86 | [![Build status](https://ci.appveyor.com/api/projects/status/k8rwm0
 
 #### support MPMC, MPSC and MCSP
 
-## c API 
-```c
-
-/*
- *
- * max_size - maximum size
- *
- */
-wfqueue_t *wfq_create(size_t max_sz);
-wfq_enq_ctx_t wfq_init_enq_ctx();
-wfq_deq_ctx_t wfq_init_deq_ctx();
-int wfq_enq(wfqueue_t *q, void* val);
-void* wfq_deq(wfqueue_t *q);
-void wfq_destroy(wfqueue_t *q);
-size_t wfq_size(wfqueue_t *q);
-size_t wfq_capacity(wfqueue_t *q);
-
-// Guarantee enqueue 
-void wfq_enq_must(wfqueue_t *q, void* val);
-// Guarantee Dequeue
-void *wfq_deq_must(wfqueue_t *q);
-
-```
-
-## c++ API 
-```c++
-namespace tWaitFree {
-
-WfqEnqCtx InitEnqCtx();
-WfqDeqCtx InitDeqCtx();
-
-/*
- * max_size - maximum size
- */
-Queue(size_t max_sz) {
-	// try to enqueue with allocated memory as argument
-	bool tryEnq(T *v, WfqEnqCtx &ctx);
-
-	// must have enqueued with allocated memory as argument
-	void enq(T *v, WfqEnqCtx &ctx);
-
-	// must have enqueued with allocated memory as argument
-	void enq(T &v, WfqEnqCtx &ctx);
-
-	// try to dequeue and return heap memory, and value need to be deleted
-	// return nullptr if dequeue unsucessfully
-	T* tryDeq(WfqDeqCtx &ctx);
-
-	// try to dequeue with pass by references
-	// return false if dequeue unsucessfully
-	bool tryDeq(T &v, WfqDeqCtx &ctx);
-
-	// must have dequeued and return heap memory, value need to delete
-	T* deq(WfqDeqCtx &ctx);
-
-	// must have dequeued with pass by references
-	void deq(T &v, WfqDeqCtx &ctx)
-
-	size_t size();
-
-	bool empty();
-
-	~Queue();
-}
-
-
-}
-```
-
-
 ## Example
 
 ### if c++
@@ -97,26 +27,23 @@ Queue(size_t max_sz) {
 tWaitFree::Queue<MyVal> myqueue(sz, n_producer, n_consumer);
 
 // wrap in to thread
-new ClassVal *s = new ClassVal;
-tWaitFree::WfqEnqCtx enqCtx = tWaitFree::InitEnqCtx(); // init 1 time in a thread only
-tWaitFree::WfqDeqCtx deqCtx = tWaitFree::InitDeqCtx(); // init 1 time in a thread only
+new ClassVal s(...);
+tWaitFree::WfqEnqCtx<MyVal> enqCtx; // init 1 time in a thread only
+tWaitFree::WfqDeqCtx<MyVal> deqCtx; // init 1 time in a thread only
 
 
-// please use enqMust to guarantee enqueue.
-if(myqueue.enq(s, enqCtx)) {
-	printf("%s\n", "Done");
+// wrap in to thread
+// please use enq to guarantee enqueue.
+if(myqueue.tryEnq(s, enqCtx)) {
+	printf("%s\n", "Enq Done");
 } else {
 	printf("%s\n", "queue is full, please try again to re-enqueue ");
 }
 
 // wrap in to thread
-// please use deqMust to guarantee dequeue.
-s = (ClassVal*) myqueue.deq(deqCtx) ; // return NULL/nullptr if no val consuming
-
-if(s) {
+// please use deq to guarantee dequeue.
+if(myqueue.tryDeq(s, deqCtx) {
   s->do_op();
-
-  delete s;
 }
 
 
@@ -129,7 +56,7 @@ if(s) {
 #include "wfqueue.h"
 
 // Fixed size of queue
-wfqueue_t *q = wfq_create(sz, n_producer, n_consumer); 
+wfqueue_t *q = wfq_create(sz); 
 wfq_enq_ctx_t enq_ctx = wfq_init_enq_ctx(); // init 1 time in a thread only
 wfq_deq_ctx_t deq_ctx = wfq_init_deq_ctx(); // init 1 time in a thread only
 // wrap in to thread
@@ -155,6 +82,16 @@ wfq_destroy(q);
 ## Build
 
 include header file in your project
+
+
+## Comparison with MoodyCamel/ConcurrentQueue
+
+| Type 	| WFQUEUE (c++) ms	| WFQUEUE (c)ms	| MOODYCAMEL (ms) 	| INPUT PER THREAD 	|
+|------	|---------------	|-------------	|-----------------	|------------------	|
+| MPMC 	| 389.0         	| 370         	| 393.9           	| 1,000,000        	|
+| MPSC 	| 494.50        	| 600         	| 182.0           	| 1,000,000        	|
+| MCSP 	| 252.70        	| 290.5       	| 175.7           	| 1,000,000        	|
+
 
 ## Next feature target
 
