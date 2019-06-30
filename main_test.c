@@ -8,6 +8,7 @@
 #include <time.h>
 #include <pthread.h>
 // #include <thread>
+// #include "wfqueue-test-set.h"
 #include "wfqueue.h"
 #include <unistd.h>
 #include <assert.h>
@@ -17,7 +18,7 @@
 #define TEST_MAX_INPUT  MILLION
 
 typedef struct {
-    size_t v;
+    int v;
 } MyVal;
 
 typedef struct {
@@ -29,8 +30,7 @@ typedef struct {
 } wfq_test_config_t;
 
 int TEST_COUNT = 0;
-
-// int payload[TEST_MAX_INPUT * 16];
+volatile double avg_time = 0;
 
 MyVal* newval(size_t digit) {
     MyVal *data = (MyVal*)malloc(sizeof(MyVal));
@@ -48,8 +48,8 @@ static void * producing_fn(void *v) {
     for (z = 0; z < TEST_MAX_INPUT; z++) {
         MyVal* s = newval(__sync_fetch_and_add(&config->nProducing, 1));
 
-        while (!wfq_enq(q, s, &ctx))
-            ;
+        wfq_enq_must(q, s, &ctx);
+        // wfq_single_enq_must(q, s);
         // wfq_sleep(1);
         // if (xx % 100000 == 0)
         //     printf("%zu\n", xx);
@@ -65,12 +65,12 @@ static void * consuming_fn(void *v) {
 
     for (;;) {
         MyVal* s;
-        if ( (s = (MyVal*)wfq_deq(q, &ctx) )  ) {
-            // if (s->v % 50 == 0) {
+        while ( (s = (MyVal*)wfq_deq(q, &ctx) )  ) {
+            // if (s->v % 100000 == 0) {
             //     printf("t %zu\n", s->v);
             // }
-            __sync_fetch_and_add(&config->nConsuming, 1);
             free(s);
+            __sync_fetch_and_add(&config->nConsuming, 1);
         }
         if (__sync_fetch_and_add(&config->nConsuming, 0) >= TEST_MAX_INPUT * (config->nProducer)) {
             break;
@@ -94,9 +94,9 @@ int running_wfq_test(size_t arg_producer, size_t arg_consumer, size_t arg_produc
     config.nProducing = arg_producing;
     config.nConsumer = arg_consumer;
     config.nConsuming = arg_consuming;
-    config.q = wfq_create(TEST_MAX_INPUT);
+    config.q = wfq_create(TEST_MAX_INPUT * 8);
 
-    char *testname = (char*)"Fixed size wfqueue test";
+    // char *testname = (char*)"Fixed size wfqueue test";
 
     gettimeofday(&start_t, NULL);
 
@@ -108,13 +108,13 @@ int running_wfq_test(size_t arg_producer, size_t arg_consumer, size_t arg_produc
         pthread_create(testThreads + i, 0, &consuming_fn,  &config);
     }
 
-    while (__sync_fetch_and_add(&config.nConsuming, 0) < TEST_MAX_INPUT * (config.nProducer)) {
-        struct timeval curr;
-        gettimeofday(&curr, NULL);
-        if ((curr.tv_usec - start_t.tv_usec) >= (120 * 1000 * 1000)) { // 2 minute
-            assert(0 && " too long to consuming the queue ");
-        }
-    }
+    // while (__sync_fetch_and_add(&config.nConsuming, 0) < TEST_MAX_INPUT * (config.nProducer)) {
+    //     struct timeval curr;
+    //     gettimeofday(&curr, NULL);
+    //     if ((curr.tv_usec - start_t.tv_usec) >= (120 * 1000 * 1000)) { // 2 minute
+    //         assert(0 && " too long to consuming the queue ");
+    //     }
+    // }
 
     for (i = 0; i < total_threads; i++) {
         void *ret = NULL;
@@ -124,52 +124,61 @@ int running_wfq_test(size_t arg_producer, size_t arg_consumer, size_t arg_produc
 
     gettimeofday(&end_t, NULL);
     diff_t = (double)(end_t.tv_usec - start_t.tv_usec) / 1000000 + (double)(end_t.tv_sec - start_t.tv_sec);
-
-    printf("===END Test= %d - %s, test type %s ===\n", ++TEST_COUNT, testname, test_type);
-    printf("======Total consuming = %zu\n", __sync_fetch_and_add(&config.nConsuming, 0));
-    printf("======Left over = %zu\n", wfq_size(config.q));
-    printf("======head=%zu, tail=%zu\n", __atomic_load_n(&config.q->head, __ATOMIC_ACQUIRE), __atomic_load_n(&config.q->tail, __ATOMIC_ACQUIRE));
-    printf("Execution time = %f\n", diff_t);
+    // printf("===END Test= %d - %s, test type %s ===\n", ++TEST_COUNT, testname, test_type);
+    // printf("======Total consuming = %zu\n", __sync_fetch_and_add(&config.nConsuming, 0));
+    // printf("======Left over = %zu\n", wfq_size(config.q));
+    // printf("======head=%zu, tail=%zu\n", __atomic_load_n(&config.q->head, __ATOMIC_ACQUIRE), __atomic_load_n(&config.q->tail, __ATOMIC_ACQUIRE));
+    // printf("Execution time = %f\n", diff_t);
     assert(wfq_size(config.q) == 0 && " still left over queue inside ");
     assert(__atomic_load_n(&config.q->head, __ATOMIC_ACQUIRE) + 100 > __atomic_load_n(&config.q->tail, __ATOMIC_ACQUIRE) && " head tail gap too far");
 
 
     wfq_destroy(config.q);
+
+    // __sync_fetch_and_add(&avg_time, diff_t);
+    avg_time += diff_t;
+
     return 0;
 }
 
 int main(void) {
     int ret = 0, i;
 
-    // for (i = 0; i < TEST_MAX_INPUT * 16; i++) {
-    //     payload[i] = i;
-    // }
-
     unsigned int n = sysconf(_SC_NPROCESSORS_ONLN); // Linux / MAC OS
     if ( n <= 2) {
-      n = 4;
+        n = 4;
     }
-    
+
     if (n > 1) {
-        int NUM_PRODUCER = (n/2);
-        int NUM_CONSUMER = (n/2);
-        int running_set = 5;
+        int NUM_PRODUCER = n / 2;
+        int NUM_CONSUMER = n / 2;
+        int running_set = 10;
 
         for (i = 0; i < running_set; i++) {
             ret = running_wfq_test(NUM_PRODUCER, NUM_CONSUMER, 0, 0, NUM_PRODUCER + NUM_CONSUMER, "MPMC");
         }
-        //
+
+        printf("average time is %.6f\n", avg_time / running_set);
+        avg_time = 0;
+        usleep(1);
+
         NUM_PRODUCER = n - 1;
         NUM_CONSUMER = 1;
         for (i = 0; i < running_set; i++) {
             ret = running_wfq_test(NUM_PRODUCER, NUM_CONSUMER, 0, 0, NUM_PRODUCER + NUM_CONSUMER, "MPSC");
         }
+        printf("average time is %.6f\n", avg_time / running_set);
+        avg_time = 0;
+        usleep(1);
+
 
         NUM_PRODUCER = 1;
         NUM_CONSUMER =  n - 1;
         for (i = 0; i < running_set; i++) {
             ret = running_wfq_test(NUM_PRODUCER, NUM_CONSUMER, 0, 0, NUM_PRODUCER + NUM_CONSUMER, "MCSP");
         }
+        printf("average time is %.6f\n", avg_time / running_set);
+
     } else {
         ret = -1;
         printf("One thread is not enough for testing\n");
