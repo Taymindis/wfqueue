@@ -86,11 +86,21 @@ include header file in your project
 
 ## Comparison with MoodyCamel/ConcurrentQueue
 
-| Type 	| WFQUEUE (c++) ms	| WFQUEUE (c)ms	| MOODYCAMEL (ms) 	| INPUT PER THREAD 	|
-|------	|---------------	|-------------	|-----------------	|------------------	|
-| MPMC 	| 389.0         	| 370         	| 393.9           	| 1,000,000        	|
-| MPSC 	| 494.50        	| 600         	| 182.0           	| 1,000,000        	|
-| MCSP 	| 252.70        	| 290.5       	| 175.7           	| 1,000,000        	|
+#### 4 Concurrent Threads
+| Type 	| WFQUEUE (c++) ms	| WFQUEUE (c)ms	| MOODYCAMEL (ms) 	| INPUTS PER THREAD 	|
+|------	|---------------	|-------------	|-----------------	|------------------		|
+| MPMC 	| 389.0         	| 370         	| 393.9           	| 1,000,000 * 4    		|
+| MPSC 	| 494.50        	| 600         	| 182.0           	| 1,000,000 * 4    		|
+| MCSP 	| 252.70        	| 290.5       	| 175.7           	| 1,000,000 * 4    		|
+
+
+#### 8 Concurrent Threads
+
+| Type 	| WFQUEUE (c++) ms	| WFQUEUE (c)ms	| MOODYCAMEL (ms) 	| INPUTS PER THREAD 	|
+|------	|---------------	|-------------	|-----------------	|------------------		|
+| MPMC 	| 657.20        	| 642.2        	| 517.90           	| 1,000,000 * 8    		|
+| MPSC 	| 1223.50        	| 1610         	| 1471.8           	| 1,000,000 * 8    		|
+| MCSP 	| 247.80        	| 245.2       	| 253.2           	| 1,000,000 * 8    		|
 
 
 ## Next feature target
