@@ -38,7 +38,7 @@
 #ifndef __cplusplus
 #if defined __GNUC__ || defined __APPLE__
 #include <stdlib.h>
-#if ((__GNUC__ >= 4 && __GNUC_MINOR__ > 7) || (__GNUC__ >= 5 )) || defined __APPLE__
+#if ((__GNUC__ >= 4 && __GNUC_MINOR__ > 7) || (__GNUC__ >= 5 )) || defined __APPLE__ || defined __clang__
 #define __WFQ_FETCH_ADD_(ptr, val, order) __atomic_fetch_add(ptr, val, order)
 #define __WFQ_CAS_(ptr, cmp, val, succ_order, failed_order) __sync_bool_compare_and_swap(ptr, cmp, val, 0, succ_order, failed_order)
 #define __WFQ_CAS2_(ptr, cmp, val, succ_order, failed_order) __atomic_compare_exchange_n(ptr, cmp, val, 1, succ_order, failed_order)

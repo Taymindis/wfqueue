@@ -129,7 +129,7 @@ int main(void) {
         }
 
 
-        std::cout << "Avg Time of running set " <<  running_set << " is " << std::fixed << std::setprecision(5) << avgTime / running_set << "\n";
+        std::cout << "Avg Time of running set " <<  running_set << " is " << std::fixed << std::setprecision(5) << (avgTime / running_set) << "\n";
         avgTime = 0;
 
         NUM_PRODUCER = n - 1;
@@ -139,7 +139,7 @@ int main(void) {
         }
 
 
-        std::cout << "Avg Time of running set " <<  running_set << " is " << std::fixed << std::setprecision(5) << avgTime / running_set << "\n";
+        std::cout << "Avg Time of running set " <<  running_set << " is " << std::fixed << std::setprecision(5) << (avgTime / running_set) << "\n";
         avgTime = 0;
 
         NUM_PRODUCER = 1;
@@ -149,7 +149,7 @@ int main(void) {
         }
 
 
-        std::cout << "Avg Time of running set " <<  running_set << " is " << std::fixed << std::setprecision(5) << avgTime / running_set << "\n";
+        std::cout << "Avg Time of running set " <<  running_set << " is " << std::fixed << std::setprecision(5) << (avgTime / running_set) << "\n";
         avgTime = 0;
     } else {
         ret = -1;

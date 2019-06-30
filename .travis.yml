@@ -32,26 +32,26 @@ matrix:
         - cmake ..
         - cmake --build .
 
-    - env: CXX=g++-4.9 CC=gcc-4.9
-      addons:
-        apt:
-          packages:
-            - g++-4.9
-          sources: *sources
+    # - env: CXX=g++-4.9 CC=gcc-4.9
+    #   addons:
+    #     apt:
+    #       packages:
+    #         - g++-4.9
+    #       sources: *sources
 
-      before_script:
-        - wget https://github.com/google/googletest/archive/release-1.8.1.tar.gz
-        - tar -zxvf release-1.8.1.tar.gz -C google_test/
-        - $CC -Wall -I./ main_test.c -pthread -o test
-        - $CXX -Wall -std=c++11 -I./ MainTest.cpp -pthread -o testpp
+    #   before_script:
+    #     - wget https://github.com/google/googletest/archive/release-1.8.1.tar.gz
+    #     - tar -zxvf release-1.8.1.tar.gz -C google_test/
+    #     - $CC -Wall -I./ main_test.c -pthread -o test
+    #     - $CXX -Wall -std=c++11 -I./ MainTest.cpp -pthread -o testpp
 
-      script:
-        - ./test
-        - ./testpp
-        - mkdir google_test/build
-        - cd google_test/build
-        - cmake ..
-        - cmake --build .
+    #   script:
+    #     - ./test
+    #     - ./testpp
+    #     - mkdir google_test/build
+    #     - cd google_test/build
+    #     - cmake ..
+    #     - cmake --build .
 
     - env: CXX=clang++-3.8 CC=clang-3.8
       addons:
