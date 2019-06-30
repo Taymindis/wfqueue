@@ -328,9 +328,11 @@ wfq_capacity(wfqueue_t *q) {
 #if defined __GNUC__ || defined __APPLE__
 #define _WFQ_ALIGNED_SZ 128
 #define _WFQ_CACHE_128_ALIGNED_ __attribute__((aligned(_WFQ_ALIGNED_SZ)))
+#define _WFQ_MSVC_CACHE_128_ALIGNED_
 #else
 #define _WFQ_ALIGNED_SZ 128
-#define _WFQ_CACHE_128_ALIGNED_ __declspec(align(_WFQ_ALIGNED_SZ))
+#define _WFQ_CACHE_128_ALIGNED_
+#define _WFQ_MSVC_CACHE_128_ALIGNED_ __declspec(align(_WFQ_ALIGNED_SZ))
 #endif
 
 
@@ -341,7 +343,7 @@ static const size_t increase_one = 1;
 namespace tWaitFree {
 
 template <class eT>
-struct _WFQ_CACHE_128_ALIGNED_ WfqEnqCtx {
+struct _WFQ_MSVC_CACHE_128_ALIGNED_ _WFQ_CACHE_128_ALIGNED_ WfqEnqCtx {
     unsigned hasq_: 1 _WFQ_CACHE_128_ALIGNED_;
     eT *pendingNewVal_ _WFQ_CACHE_128_ALIGNED_;
     std::atomic<eT*> *nptr_ _WFQ_CACHE_128_ALIGNED_;
@@ -354,7 +356,7 @@ struct _WFQ_CACHE_128_ALIGNED_ WfqEnqCtx {
 };
 
 template <class dT>
-struct _WFQ_CACHE_128_ALIGNED_ WfqDeqCtx {
+struct _WFQ_MSVC_CACHE_128_ALIGNED_ _WFQ_CACHE_128_ALIGNED_ WfqDeqCtx {
     unsigned hasq_: 1 _WFQ_CACHE_128_ALIGNED_;
     std::atomic<dT*> *nptr_ _WFQ_CACHE_128_ALIGNED_;
 
@@ -365,7 +367,7 @@ struct _WFQ_CACHE_128_ALIGNED_ WfqDeqCtx {
 } ;
 
 template <class T>
-class _WFQ_CACHE_128_ALIGNED_ Queue {
+class _WFQ_MSVC_CACHE_128_ALIGNED_ _WFQ_CACHE_128_ALIGNED_ Queue {
 private:
     atomic_wfqindex head_ _WFQ_CACHE_128_ALIGNED_;
     atomic_wfqindex tail_ _WFQ_CACHE_128_ALIGNED_;
