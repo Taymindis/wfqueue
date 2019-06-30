@@ -21,8 +21,8 @@ matrix:
       before_script:
         - wget https://github.com/google/googletest/archive/release-1.8.1.tar.gz
         - tar -zxvf release-1.8.1.tar.gz -C google_test/
-        - $CC -Wall -I./ main_test.c -pthread -o test
-        - $CXX -Wall -std=c++11 -I./ MainTest.cpp -pthread -o testpp
+        - $CC -Wall -O3 -I./ main_test.c -pthread -o test
+        - $CXX -Wall -O3 -std=c++11 -I./ MainTest.cpp -pthread -o testpp
 
       script:
         - ./test
@@ -63,8 +63,8 @@ matrix:
       before_script:
         - wget https://github.com/google/googletest/archive/release-1.8.1.tar.gz
         - tar -zxvf release-1.8.1.tar.gz -C google_test/
-        - $CC -Wall -I./ main_test.c -pthread -o test
-        - $CXX -Wall -std=c++11 -I./ MainTest.cpp -pthread -o testpp
+        - $CC -Wall -O3 -I./ main_test.c -pthread -o test
+        - $CXX -Wall -O3 -std=c++11 -I./ MainTest.cpp -pthread -o testpp
 
       script:
         - ./test
@@ -84,8 +84,8 @@ matrix:
       before_script:
         - wget https://github.com/google/googletest/archive/release-1.8.1.tar.gz
         - tar -zxvf release-1.8.1.tar.gz -C google_test/
-        - $CC -Wall -I./ main_test.c -pthread -o test
-        - $CXX -Wall -std=c++11 -I./ MainTest.cpp -pthread -o testpp
+        - $CC -Wall -O3 -I./ main_test.c -pthread -o test
+        - $CXX -Wall -O3 -std=c++11 -I./ MainTest.cpp -pthread -o testpp
 
       script:
         - ./test
@@ -105,8 +105,8 @@ matrix:
       before_script:
         - wget https://github.com/google/googletest/archive/release-1.8.1.tar.gz
         - tar -zxvf release-1.8.1.tar.gz -C google_test/
-        - $CC -Wall -I./ main_test.c -pthread -o test
-        - $CXX -Wall -std=c++11 -I./ MainTest.cpp -pthread -o testpp
+        - $CC -Wall -O3 -I./ main_test.c -pthread -o test
+        - $CXX -Wall -O3 -std=c++11 -I./ MainTest.cpp -pthread -o testpp
 
       script:
         - ./test

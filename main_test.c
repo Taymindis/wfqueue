@@ -94,7 +94,7 @@ int running_wfq_test(size_t arg_producer, size_t arg_consumer, size_t arg_produc
     config.nProducing = arg_producing;
     config.nConsumer = arg_consumer;
     config.nConsuming = arg_consuming;
-    config.q = wfq_create(TEST_MAX_INPUT * 8);
+    config.q = wfq_create(1024);
 
     // char *testname = (char*)"Fixed size wfqueue test";
 

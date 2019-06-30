@@ -64,31 +64,25 @@
 #define _WFQ_NULL_ ((void *) 0)
 #define _WFQ_CACHE_64_ALIGNED_ __attribute__((aligned(64)))
 #define _WFQ_CACHE_128_ALIGNED_ __attribute__((aligned(128)))
-#if defined __GNUC__ || defined __APPLE__
-#define _WFQ_MSVC_CACHE_ALIGNED_
-#else
-#define _WFQ_MSVC_CACHE_ALIGNED_ __declspec(align(64))
-#endif
 
-
-typedef _WFQ_MSVC_CACHE_ALIGNED_ struct _WFQ_CACHE_128_ALIGNED_ {
+typedef struct {
     size_t volatile head _WFQ_CACHE_64_ALIGNED_;
     size_t volatile tail _WFQ_CACHE_64_ALIGNED_;
     size_t max _WFQ_CACHE_64_ALIGNED_;
     void * volatile *nptr _WFQ_CACHE_64_ALIGNED_;
-}  wfqueue_t;
+}  wfqueue_t _WFQ_CACHE_128_ALIGNED_;
 
-typedef _WFQ_MSVC_CACHE_ALIGNED_ struct _WFQ_CACHE_128_ALIGNED_ {
+typedef struct {
     // size_t qtix_ _WFQ_CACHE_64_ALIGNED_;
     void * volatile *_nptrs _WFQ_CACHE_64_ALIGNED_;
     unsigned hasq_: 1;
-} wfq_enq_ctx_t;
+} wfq_enq_ctx_t _WFQ_CACHE_128_ALIGNED_;
 
-typedef _WFQ_MSVC_CACHE_ALIGNED_ struct _WFQ_CACHE_128_ALIGNED_ {
+typedef struct {
     // size_t qtix_ _WFQ_CACHE_64_ALIGNED_;
     void * volatile *_nptrs _WFQ_CACHE_64_ALIGNED_;
     unsigned hasq_: 1;
-} wfq_deq_ctx_t;
+} wfq_deq_ctx_t _WFQ_CACHE_128_ALIGNED_;
 
 /*
  * max_size - maximum size
@@ -100,7 +94,7 @@ static void* wfq_deq(wfqueue_t *q, wfq_deq_ctx_t *context);
 static void* wfq_single_deq(wfqueue_t *q);
 static void wfq_destroy(wfqueue_t *q);
 static inline void *_wfq_malloc(size_t alignment, size_t size) {
-#if ( _POSIX_C_SOURCE >= 200112L || _XOPEN_SOURCE >= 600 )
+#if ( __clang__ || _POSIX_C_SOURCE >= 200112L || _XOPEN_SOURCE >= 600 )
     void * ptr;
     int ret = posix_memalign(&ptr, alignment, size);
     if (ret != 0) {
@@ -333,10 +327,12 @@ wfq_capacity(wfqueue_t *q) {
 #define _WFQ_NULL_ 0
 #if defined __GNUC__ || defined __APPLE__
 #define _WFQ_ALIGNED_SZ 128
-#define _WFQ_CACHE_64_ALIGNED_ __attribute__((aligned(_WFQ_ALIGNED_SZ)))
+#define _WFQ_CACHE_128_ALIGNED_ __attribute__((aligned(_WFQ_ALIGNED_SZ)))
+#define _WFQ_MSVC_128_ALIGNED_
 #else
 #define _WFQ_ALIGNED_SZ 128
-#define _WFQ_CACHE_64_ALIGNED_
+#define _WFQ_CACHE_128_ALIGNED_
+#define _WFQ_MSVC_128_ALIGNED_ __declspec(align(_WFQ_ALIGNED_SZ))
 #endif
 
 
@@ -347,10 +343,10 @@ static const size_t increase_one = 1;
 namespace tWaitFree {
 
 template <class eT>
-struct _WFQ_CACHE_64_ALIGNED_ WfqEnqCtx {
-    unsigned hasq_: 1 _WFQ_CACHE_64_ALIGNED_;
-    eT *pendingNewVal_ _WFQ_CACHE_64_ALIGNED_;
-    std::atomic<eT*> *nptr_ _WFQ_CACHE_64_ALIGNED_;
+_WFQ_MSVC_128_ALIGNED_ struct _WFQ_CACHE_128_ALIGNED_ WfqEnqCtx {
+    unsigned hasq_: 1 _WFQ_CACHE_128_ALIGNED_;
+    eT *pendingNewVal_ _WFQ_CACHE_128_ALIGNED_;
+    std::atomic<eT*> *nptr_ _WFQ_CACHE_128_ALIGNED_;
 
     WfqEnqCtx() {
         hasq_ = 0;
@@ -360,9 +356,9 @@ struct _WFQ_CACHE_64_ALIGNED_ WfqEnqCtx {
 };
 
 template <class dT>
-struct _WFQ_CACHE_64_ALIGNED_ WfqDeqCtx {
-    unsigned hasq_: 1 _WFQ_CACHE_64_ALIGNED_;
-    std::atomic<dT*> *nptr_ _WFQ_CACHE_64_ALIGNED_;
+_WFQ_MSVC_128_ALIGNED_ struct _WFQ_CACHE_128_ALIGNED_ WfqDeqCtx {
+    unsigned hasq_: 1 _WFQ_CACHE_128_ALIGNED_;
+    std::atomic<dT*> *nptr_ _WFQ_CACHE_128_ALIGNED_;
 
     WfqDeqCtx() {
         hasq_ = 0;
@@ -371,12 +367,12 @@ struct _WFQ_CACHE_64_ALIGNED_ WfqDeqCtx {
 } ;
 
 template <class T>
-class _WFQ_CACHE_64_ALIGNED_ Queue {
+_WFQ_MSVC_128_ALIGNED_ class _WFQ_CACHE_128_ALIGNED_ Queue {
 private:
-    atomic_wfqindex head_ _WFQ_CACHE_64_ALIGNED_;
-    atomic_wfqindex tail_ _WFQ_CACHE_64_ALIGNED_;
-    size_t max_ _WFQ_CACHE_64_ALIGNED_;
-    std::atomic<T*> *nptr_ _WFQ_CACHE_64_ALIGNED_;
+    atomic_wfqindex head_ _WFQ_CACHE_128_ALIGNED_;
+    atomic_wfqindex tail_ _WFQ_CACHE_128_ALIGNED_;
+    size_t max_ _WFQ_CACHE_128_ALIGNED_;
+    std::atomic<T*> *nptr_ _WFQ_CACHE_128_ALIGNED_;
     void *freebuf_;
 
 public:
