@@ -94,7 +94,7 @@ int running_wfq_test(size_t arg_producer, size_t arg_consumer, size_t arg_produc
     config.nProducing = arg_producing;
     config.nConsumer = arg_consumer;
     config.nConsuming = arg_consuming;
-    config.q = wfq_create(2048);
+    config.q = wfq_create(1024);
 
     // char *testname = (char*)"Fixed size wfqueue test";
 
@@ -152,7 +152,7 @@ int main(void) {
     if (n > 1) {
         int NUM_PRODUCER = n / 2;
         int NUM_CONSUMER = n / 2;
-        int running_set = 10;
+        int running_set = 20;
 
         for (i = 0; i < running_set; i++) {
             ret = running_wfq_test(NUM_PRODUCER, NUM_CONSUMER, 0, 0, NUM_PRODUCER + NUM_CONSUMER, "MPMC");
