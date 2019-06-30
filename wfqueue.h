@@ -322,7 +322,7 @@ wfq_capacity(wfqueue_t *q) {
 // For C++
 #ifdef __cplusplus
 #if defined _WIN32 || defined _WIN64
-//#define _ENABLE_ATOMIC_ALIGNMENT_FIX
+#define _ENABLE_ATOMIC_ALIGNMENT_FIX
 #endif
 #include <atomic>
 #include <cstring>
@@ -334,8 +334,9 @@ wfq_capacity(wfqueue_t *q) {
 #if defined __GNUC__ || defined __APPLE__
 #define _WFQ_ALIGNED_SZ 128
 #define _WFQ_CACHE_64_ALIGNED_ __attribute__((aligned(_WFQ_ALIGNED_SZ)))
-
 #else
+#define _WFQ_ALIGNED_SZ
+#define _WFQ_CACHE_64_ALIGNED_
 #endif
 
 
