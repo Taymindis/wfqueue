@@ -103,6 +103,15 @@ include header file in your project
 | MCSP 	| 247.80        	| 245.2       	| 253.2           	| 1,000,000 * 8    		|
 
 
+#### 8 Concurrent Threads with wfqueue(2 capacity only), create a small queue
+
+| Type 	| WFQUEUE (c++) ms	| WFQUEUE (c)ms	| MOODYCAMEL (ms) 	| INPUTS PER THREAD 	|
+|------	|---------------	|-------------	|-----------------	|------------------		|
+| MPMC 	| 521	        	| 577        	| 517.90           	| 1,000,000 * 8    		|
+| MPSC 	| 1718	        	| 1700         	| 1471.8           	| 1,000,000 * 8    		|
+| MCSP 	| 403	        	| 360       	| 253.2           	| 1,000,000 * 8    		|
+
+
 ## Next feature target
 
 No pre allocated size needed, it will expand itself (expandable size)

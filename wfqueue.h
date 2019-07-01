@@ -182,12 +182,14 @@ wfq_enq(wfqueue_t *q, void* val, wfq_enq_ctx_t *ctx) {
         // nptrs = q->nptr + ctx->qtix_;
         currval = __WFQ_LOAD_(nptrs, __ATOMIC_CONSUME);
         for (n = _WFQ_MAX_TRY_; n > 0; n--) {
-            // if ( !(currval = __WFQ_LOAD_(nptrs, __ATOMIC_CONSUME) ) &&
-            if ( (!currval || !(currval = __WFQ_LOAD_(nptrs, __ATOMIC_CONSUME) ) ) &&
-                    __WFQ_CAS2_(nptrs, &currval,  val, __ATOMIC_RELEASE, __ATOMIC_CONSUME) ) {
-                ctx->hasq_ = 0;
-                __WFQ_SYNC_MEMORY_();
-                return 1;
+            if (!currval) {
+                if (__WFQ_CAS2_(nptrs, &currval,  val, __ATOMIC_RELEASE, __ATOMIC_CONSUME)) {
+                    ctx->hasq_ = 0;
+                    __WFQ_SYNC_MEMORY_();
+                    return 1;
+                }
+            } else {
+                currval = __WFQ_LOAD_(nptrs, __ATOMIC_CONSUME);
             }
             __WFQ_SYNC_MEMORY_();
         }
@@ -198,19 +200,19 @@ wfq_enq(wfqueue_t *q, void* val, wfq_enq_ctx_t *ctx) {
     nptrs = q->nptr + head;
     currval = __WFQ_LOAD_(nptrs, __ATOMIC_CONSUME);
     for (n = _WFQ_MAX_TRY_; n > 0; n--) {
-        // if (  !currval  &&
-        // if ( !(currval = __WFQ_LOAD_(nptrs, __ATOMIC_CONSUME) ) &&
-        if ( (!currval || !(currval = __WFQ_LOAD_(nptrs, __ATOMIC_CONSUME) ) ) &&
-                __WFQ_CAS2_(nptrs, &currval, val, __ATOMIC_RELEASE, __ATOMIC_CONSUME)) {
-            __WFQ_SYNC_MEMORY_();
-            return 1;
+        if (!currval) {
+            if (__WFQ_CAS2_(nptrs, &currval,  val, __ATOMIC_RELEASE, __ATOMIC_CONSUME)) {
+                __WFQ_SYNC_MEMORY_();
+                return 1;
+            }
+        } else {
+            currval = __WFQ_LOAD_(nptrs, __ATOMIC_CONSUME);
         }
         __WFQ_SYNC_MEMORY_();
     }
 
     ctx->_nptrs = nptrs;
     ctx->hasq_ = 1;
-    // ctx->qtix_ = head;
     return 0;
 }
 
@@ -240,12 +242,14 @@ wfq_deq(wfqueue_t *q, wfq_deq_ctx_t *ctx) {
         nptrs = ctx->_nptrs;
         val = __WFQ_LOAD_(nptrs, __ATOMIC_CONSUME);
         for (n = _WFQ_MAX_TRY_; n > 0; n--) {
-            // if (  val  &&
-            if ( ( val || (val = __WFQ_LOAD_(nptrs, __ATOMIC_CONSUME)) ) &&
-                    __WFQ_CAS2_(nptrs, &val, _WFQ_NULL_, __ATOMIC_RELEASE, __ATOMIC_CONSUME) ) {
-                ctx->hasq_ = 0;
-                __WFQ_SYNC_MEMORY_();
-                return val;
+            if (val) {
+                if (__WFQ_CAS2_(nptrs, &val, _WFQ_NULL_, __ATOMIC_RELEASE, __ATOMIC_CONSUME)) {
+                    ctx->hasq_ = 0;
+                    __WFQ_SYNC_MEMORY_();
+                    return val;
+                }
+            } else {
+                val = __WFQ_LOAD_(nptrs, __ATOMIC_CONSUME);
             }
             __WFQ_SYNC_MEMORY_();
         }
@@ -256,19 +260,19 @@ wfq_deq(wfqueue_t *q, wfq_deq_ctx_t *ctx) {
     nptrs = q->nptr + tail;
     val = __WFQ_LOAD_(nptrs, __ATOMIC_CONSUME);
     for (n = _WFQ_MAX_TRY_; n > 0; n--) {
-        // if (  val  &&
-        if ( ( val || (val = __WFQ_LOAD_(nptrs, __ATOMIC_CONSUME)) ) &&
-                __WFQ_CAS2_(nptrs, &val, _WFQ_NULL_, __ATOMIC_RELEASE, __ATOMIC_CONSUME) ) {
-            __WFQ_SYNC_MEMORY_();
-            return val;
+        if (val) {
+            if (__WFQ_CAS2_(nptrs, &val, _WFQ_NULL_, __ATOMIC_RELEASE, __ATOMIC_CONSUME)) {
+                __WFQ_SYNC_MEMORY_();
+                return val;
+            }
+        } else {
+            val = __WFQ_LOAD_(nptrs, __ATOMIC_CONSUME);
         }
         __WFQ_SYNC_MEMORY_();
     }
 
-    // ctx->qtix_ = tail;
     ctx->_nptrs = nptrs;
     ctx->hasq_ = 1;
-
     return _WFQ_NULL_;
 }
 
@@ -407,13 +411,16 @@ public:
             currval = nptrs->load(std::memory_order_consume);
             for (int n = _WFQ_MAX_TRY_; n > 0; n--) {
                 // if (!currval &&
-                if ( (!currval || !( currval = nptrs->load(std::memory_order_consume) ) ) &&
-                        nptrs->compare_exchange_strong(currval, newVal,
+                if ( !currval ) {
+                    if (nptrs->compare_exchange_strong(currval, newVal,
                                                        std::memory_order_release,
                                                        std::memory_order_consume)) {
-                    ctx.hasq_ = 0;
-                    atomic_thread_fence(std::memory_order_seq_cst);
-                    return true;
+                        ctx.hasq_ = 0;
+                        atomic_thread_fence(std::memory_order_seq_cst);
+                        return true;
+                    }
+                } else {
+                    currval = nptrs->load(std::memory_order_consume);
                 }
                 atomic_thread_fence(std::memory_order_seq_cst);
             }
@@ -424,13 +431,15 @@ public:
         nptrs = &nptr_[head];
         currval = nptrs->load(std::memory_order_consume);
         for (int n = _WFQ_MAX_TRY_; n > 0; n--) {
-            // if (!currval &&
-            if ( (!currval || !( currval = nptrs->load(std::memory_order_consume) ) ) &&
-                    nptrs->compare_exchange_strong(currval, newVal,
+            if ( !currval ) {
+                if (nptrs->compare_exchange_strong(currval, newVal,
                                                    std::memory_order_release,
                                                    std::memory_order_consume)) {
-                atomic_thread_fence(std::memory_order_seq_cst);
-                return true;
+                    atomic_thread_fence(std::memory_order_seq_cst);
+                    return true;
+                }
+            } else {
+                currval = nptrs->load(std::memory_order_consume);
             }
             atomic_thread_fence(std::memory_order_seq_cst);
         }
@@ -450,13 +459,16 @@ public:
             currval = nptrs->load(std::memory_order_consume);
             for (int n = _WFQ_MAX_TRY_; n > 0; n--) {
                 // if (!currval &&
-                if ( (!currval || !( currval = nptrs->load(std::memory_order_consume) ) ) &&
-                        nptrs->compare_exchange_strong(currval, newVal,
+                if ( !currval ) {
+                    if (nptrs->compare_exchange_strong(currval, newVal,
                                                        std::memory_order_release,
                                                        std::memory_order_consume)) {
-                    ctx.hasq_ = 0;
-                    atomic_thread_fence(std::memory_order_seq_cst);
-                    return true;
+                        ctx.hasq_ = 0;
+                        atomic_thread_fence(std::memory_order_seq_cst);
+                        return true;
+                    }
+                } else {
+                    currval = nptrs->load(std::memory_order_consume);
                 }
                 atomic_thread_fence(std::memory_order_seq_cst);
             }
@@ -467,12 +479,15 @@ public:
         currval = nptrs->load(std::memory_order_consume);
         for (int n = _WFQ_MAX_TRY_; n > 0; n--) {
             // if (!currval &&
-            if ( (!currval || !( currval = nptrs->load(std::memory_order_consume) ) ) &&
-                    nptrs->compare_exchange_strong(currval, newVal,
+            if ( !currval ) {
+                if (nptrs->compare_exchange_strong(currval, newVal,
                                                    std::memory_order_release,
                                                    std::memory_order_consume)) {
-                atomic_thread_fence(std::memory_order_seq_cst);
-                return true;
+                    atomic_thread_fence(std::memory_order_seq_cst);
+                    return true;
+                }
+            } else {
+                currval = nptrs->load(std::memory_order_consume);
             }
             atomic_thread_fence(std::memory_order_seq_cst);
         }
@@ -489,16 +504,18 @@ public:
             nptrs = ctx.nptr_;
             val = nptrs->load(std::memory_order_consume);
             for (int n = _WFQ_MAX_TRY_; n > 0; n--) {
-                // if (val &&
-                if ( ( val || (val = nptrs->load(std::memory_order_consume) ) ) &&
-                        nptrs->compare_exchange_strong(val, nullptr,
+                if ( val ) {
+                    if (nptrs->compare_exchange_strong(val, nullptr,
                                                        std::memory_order_release,
                                                        std::memory_order_consume)) {
-                    ctx.hasq_ = 0;
-                    atomic_thread_fence(std::memory_order_seq_cst);
-                    v = *val;
-                    delete val;
-                    return true;
+                        ctx.hasq_ = 0;
+                        atomic_thread_fence(std::memory_order_seq_cst);
+                        v = *val;
+                        delete val;
+                        return true;
+                    }
+                } else {
+                    val = nptrs->load(std::memory_order_consume);
                 }
                 atomic_thread_fence(std::memory_order_seq_cst);
             }
@@ -509,15 +526,17 @@ public:
         nptrs = &nptr_[tail];
         val = nptrs->load(std::memory_order_consume);
         for (int n = _WFQ_MAX_TRY_; n > 0; n--) {
-            // if ( val
-            if ( ( val || (val = nptrs->load(std::memory_order_consume) ) ) &&
-                    nptrs->compare_exchange_strong(val, nullptr,
+            if ( val ) {
+                if (nptrs->compare_exchange_strong(val, nullptr,
                                                    std::memory_order_release,
-                                                   std::memory_order_consume) ) {
-                atomic_thread_fence(std::memory_order_seq_cst);
-                v = *val;
-                delete val;
-                return true;
+                                                   std::memory_order_consume)) {
+                    atomic_thread_fence(std::memory_order_seq_cst);
+                    v = *val;
+                    delete val;
+                    return true;
+                }
+            } else {
+                val = nptrs->load(std::memory_order_consume);
             }
             atomic_thread_fence(std::memory_order_seq_cst);
         }
@@ -535,14 +554,16 @@ public:
             nptrs = ctx.nptr_;
             val = nptrs->load(std::memory_order_consume);
             for (int n = _WFQ_MAX_TRY_; n > 0; n--) {
-                // if (val &&
-                if ( ( val || (val = nptrs->load(std::memory_order_consume) ) ) &&
-                        nptrs->compare_exchange_strong(val, nullptr,
+                if ( val ) {
+                    if (nptrs->compare_exchange_strong(val, nullptr,
                                                        std::memory_order_release,
                                                        std::memory_order_consume)) {
-                    ctx.hasq_ = 0;
-                    atomic_thread_fence(std::memory_order_seq_cst);
-                    return val;
+                        ctx.hasq_ = 0;
+                        atomic_thread_fence(std::memory_order_seq_cst);
+                        return val;
+                    }
+                } else {
+                    val = nptrs->load(std::memory_order_consume);
                 }
                 atomic_thread_fence(std::memory_order_seq_cst);
             }
@@ -553,13 +574,15 @@ public:
         nptrs = &nptr_[tail];
         val = nptrs->load(std::memory_order_consume);
         for (int n = _WFQ_MAX_TRY_; n > 0; n--) {
-            // if ( val
-            if ( ( val || (val = nptrs->load(std::memory_order_consume) ) ) &&
-                    nptrs->compare_exchange_strong(val, nullptr,
+            if ( val ) {
+                if (nptrs->compare_exchange_strong(val, nullptr,
                                                    std::memory_order_release,
-                                                   std::memory_order_consume) ) {
-                atomic_thread_fence(std::memory_order_seq_cst);
-                return val;
+                                                   std::memory_order_consume)) {
+                    atomic_thread_fence(std::memory_order_seq_cst);
+                    return val;
+                }
+            } else {
+                val = nptrs->load(std::memory_order_consume);
             }
             atomic_thread_fence(std::memory_order_seq_cst);
         }
@@ -569,23 +592,23 @@ public:
         return nullptr;
     }
 
-    inline void enq(T &v, WfqEnqCtx<T> &ctx) {
+    inline void enq(T & v, WfqEnqCtx<T> &ctx) {
         while (!tryEnq(v, ctx))
             atomic_thread_fence(std::memory_order_seq_cst);
     }
-    inline void enq(T *v, WfqEnqCtx<T> &ctx) {
+    inline void enq(T * v, WfqEnqCtx<T> &ctx) {
         while (!tryEnq(v, ctx))
             atomic_thread_fence(std::memory_order_seq_cst);
     }
 
-    inline void deq(T &v, WfqDeqCtx<T> &ctx) {
+    inline void deq(T & v, WfqDeqCtx<T> &ctx) {
         while (!tryDeq(v, ctx))
             atomic_thread_fence(std::memory_order_seq_cst);
     }
 
     inline T* deq(WfqDeqCtx<T> &ctx) {
         T *v_;
-        while ( !(v_= tryDeq(ctx)) )
+        while ( !(v_ = tryDeq(ctx)) )
             atomic_thread_fence(std::memory_order_seq_cst);
         return v_;
     }
