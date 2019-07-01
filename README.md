@@ -24,7 +24,7 @@ VS x64/x86 | [![Build status](https://ci.appveyor.com/api/projects/status/k8rwm0
 #include "wfqueue.h"
 
 
-tWaitFree::Queue<MyVal> myqueue(sz, n_producer, n_consumer);
+tWaitFree::Queue<MyVal> myqueue(sz);
 
 // wrap in to thread
 new ClassVal s(...);
