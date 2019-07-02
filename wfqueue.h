@@ -218,12 +218,20 @@ static int
 wfq_single_enq(wfqueue_t *q, void* val) {
     size_t head;
     void *currval, * volatile *nptrs;
+    int n;
     head = q->head % q->max;
     nptrs = q->nptr + head;
     currval = __WFQ_LOAD_(nptrs, __ATOMIC_CONSUME);
-    if (__WFQ_CAS2_(nptrs, &currval, val, __ATOMIC_RELEASE, __ATOMIC_CONSUME)) {
-        q->head++;
-        return 1;
+    for (n = _WFQ_MAX_TRY_; n > 0; n--) {
+        if (!currval) {
+            if (__WFQ_CAS2_(nptrs, &currval,  val, __ATOMIC_RELEASE, __ATOMIC_CONSUME)) {
+                q->head++;
+                return 1;
+            }
+        } else {
+            currval = __WFQ_LOAD_(nptrs, __ATOMIC_CONSUME);
+        }
+        __WFQ_SYNC_MEMORY_();
     }
     __WFQ_SYNC_MEMORY_();
     return 0;
@@ -283,11 +291,15 @@ wfq_single_deq(wfqueue_t *q) {
     nptrs = q->nptr + tail;
     val = __WFQ_LOAD_(nptrs, __ATOMIC_CONSUME);
     for (n = _WFQ_MAX_TRY_; n > 0; n--) {
-        if ( val  &&
-                __WFQ_CAS2_(nptrs, &val, _WFQ_NULL_, __ATOMIC_RELEASE, __ATOMIC_CONSUME) ) {
-            q->tail++;
-            return val;
+        if (val) {
+            if (__WFQ_CAS2_(nptrs, &val, _WFQ_NULL_, __ATOMIC_RELEASE, __ATOMIC_CONSUME)) {
+                q->tail++;
+                return val;
+            }
+        } else {
+            val = __WFQ_LOAD_(nptrs, __ATOMIC_CONSUME);
         }
+        __WFQ_SYNC_MEMORY_();
     }
     return _WFQ_NULL_;
 }
