@@ -185,7 +185,6 @@ wfq_enq(wfqueue_t *q, void* val, wfq_enq_ctx_t *ctx) {
             if (!currval) {
                 if (__WFQ_CAS2_(nptrs, &currval,  val, __ATOMIC_RELEASE, __ATOMIC_CONSUME)) {
                     ctx->hasq_ = 0;
-                    __WFQ_SYNC_MEMORY_();
                     return 1;
                 }
             } else {
@@ -202,7 +201,6 @@ wfq_enq(wfqueue_t *q, void* val, wfq_enq_ctx_t *ctx) {
     for (n = _WFQ_MAX_TRY_; n > 0; n--) {
         if (!currval) {
             if (__WFQ_CAS2_(nptrs, &currval,  val, __ATOMIC_RELEASE, __ATOMIC_CONSUME)) {
-                __WFQ_SYNC_MEMORY_();
                 return 1;
             }
         } else {
@@ -245,7 +243,6 @@ wfq_deq(wfqueue_t *q, wfq_deq_ctx_t *ctx) {
             if (val) {
                 if (__WFQ_CAS2_(nptrs, &val, _WFQ_NULL_, __ATOMIC_RELEASE, __ATOMIC_CONSUME)) {
                     ctx->hasq_ = 0;
-                    __WFQ_SYNC_MEMORY_();
                     return val;
                 }
             } else {
@@ -262,7 +259,6 @@ wfq_deq(wfqueue_t *q, wfq_deq_ctx_t *ctx) {
     for (n = _WFQ_MAX_TRY_; n > 0; n--) {
         if (val) {
             if (__WFQ_CAS2_(nptrs, &val, _WFQ_NULL_, __ATOMIC_RELEASE, __ATOMIC_CONSUME)) {
-                __WFQ_SYNC_MEMORY_();
                 return val;
             }
         } else {
@@ -416,7 +412,6 @@ public:
                                                        std::memory_order_release,
                                                        std::memory_order_consume)) {
                         ctx.hasq_ = 0;
-                        atomic_thread_fence(std::memory_order_seq_cst);
                         return true;
                     }
                 } else {
@@ -435,7 +430,6 @@ public:
                 if (nptrs->compare_exchange_strong(currval, newVal,
                                                    std::memory_order_release,
                                                    std::memory_order_consume)) {
-                    atomic_thread_fence(std::memory_order_seq_cst);
                     return true;
                 }
             } else {
@@ -464,7 +458,6 @@ public:
                                                        std::memory_order_release,
                                                        std::memory_order_consume)) {
                         ctx.hasq_ = 0;
-                        atomic_thread_fence(std::memory_order_seq_cst);
                         return true;
                     }
                 } else {
@@ -483,7 +476,6 @@ public:
                 if (nptrs->compare_exchange_strong(currval, newVal,
                                                    std::memory_order_release,
                                                    std::memory_order_consume)) {
-                    atomic_thread_fence(std::memory_order_seq_cst);
                     return true;
                 }
             } else {
@@ -509,7 +501,6 @@ public:
                                                        std::memory_order_release,
                                                        std::memory_order_consume)) {
                         ctx.hasq_ = 0;
-                        atomic_thread_fence(std::memory_order_seq_cst);
                         v = *val;
                         delete val;
                         return true;
@@ -530,7 +521,6 @@ public:
                 if (nptrs->compare_exchange_strong(val, nullptr,
                                                    std::memory_order_release,
                                                    std::memory_order_consume)) {
-                    atomic_thread_fence(std::memory_order_seq_cst);
                     v = *val;
                     delete val;
                     return true;
@@ -559,7 +549,6 @@ public:
                                                        std::memory_order_release,
                                                        std::memory_order_consume)) {
                         ctx.hasq_ = 0;
-                        atomic_thread_fence(std::memory_order_seq_cst);
                         return val;
                     }
                 } else {
@@ -578,7 +567,6 @@ public:
                 if (nptrs->compare_exchange_strong(val, nullptr,
                                                    std::memory_order_release,
                                                    std::memory_order_consume)) {
-                    atomic_thread_fence(std::memory_order_seq_cst);
                     return val;
                 }
             } else {
