@@ -41,7 +41,7 @@
 #if ((__GNUC__ >= 4 && __GNUC_MINOR__ > 7) || (__GNUC__ >= 5 )) || defined __APPLE__ || defined __clang__
 #define __WFQ_FETCH_ADD_(ptr, val, order) __atomic_fetch_add(ptr, val, order)
 #define __WFQ_CAS_(ptr, cmp, val, succ_order, failed_order) __sync_bool_compare_and_swap(ptr, cmp, val, 0, succ_order, failed_order)
-#define __WFQ_CAS2_(ptr, cmp, val, succ_order, failed_order) __atomic_compare_exchange_n(ptr, cmp, val, 1, succ_order, failed_order)
+#define __WFQ_CAS2_(ptr, cmp, val, succ_order, failed_order) __atomic_compare_exchange_n(ptr, cmp, val, 0, succ_order, failed_order)
 #define __WFQ_SWAP_(ptr, val, order) __atomic_exchange_n(ptr, val, order)
 #define __WFQ_THREAD_ID_ pthread_self
 #define __WFQ_SYNC_MEMORY_() __atomic_thread_fence(__ATOMIC_SEQ_CST)
@@ -188,9 +188,9 @@ wfq_enq(wfqueue_t *q, void* val, wfq_enq_ctx_t *ctx) {
                     return 1;
                 }
             } else {
+                __WFQ_SYNC_MEMORY_();
                 currval = __WFQ_LOAD_(nptrs, __ATOMIC_CONSUME);
             }
-            __WFQ_SYNC_MEMORY_();
         }
         return 0;
     }
@@ -204,9 +204,9 @@ wfq_enq(wfqueue_t *q, void* val, wfq_enq_ctx_t *ctx) {
                 return 1;
             }
         } else {
+            __WFQ_SYNC_MEMORY_();
             currval = __WFQ_LOAD_(nptrs, __ATOMIC_CONSUME);
         }
-        __WFQ_SYNC_MEMORY_();
     }
 
     ctx->_nptrs = nptrs;
@@ -229,11 +229,10 @@ wfq_single_enq(wfqueue_t *q, void* val) {
                 return 1;
             }
         } else {
+            __WFQ_SYNC_MEMORY_();
             currval = __WFQ_LOAD_(nptrs, __ATOMIC_CONSUME);
         }
-        __WFQ_SYNC_MEMORY_();
     }
-    __WFQ_SYNC_MEMORY_();
     return 0;
 }
 
@@ -254,9 +253,9 @@ wfq_deq(wfqueue_t *q, wfq_deq_ctx_t *ctx) {
                     return val;
                 }
             } else {
+                __WFQ_SYNC_MEMORY_();
                 val = __WFQ_LOAD_(nptrs, __ATOMIC_CONSUME);
             }
-            __WFQ_SYNC_MEMORY_();
         }
         return _WFQ_NULL_;
     }
@@ -270,9 +269,10 @@ wfq_deq(wfqueue_t *q, wfq_deq_ctx_t *ctx) {
                 return val;
             }
         } else {
+            __WFQ_SYNC_MEMORY_();
             val = __WFQ_LOAD_(nptrs, __ATOMIC_CONSUME);
         }
-        __WFQ_SYNC_MEMORY_();
+        // __atomic_thread_fence(__ATOMIC_ACQUIRE);
     }
 
     ctx->_nptrs = nptrs;
@@ -297,9 +297,9 @@ wfq_single_deq(wfqueue_t *q) {
                 return val;
             }
         } else {
+            __WFQ_SYNC_MEMORY_();
             val = __WFQ_LOAD_(nptrs, __ATOMIC_CONSUME);
         }
-        __WFQ_SYNC_MEMORY_();
     }
     return _WFQ_NULL_;
 }
@@ -420,16 +420,16 @@ public:
             for (int n = _WFQ_MAX_TRY_; n > 0; n--) {
                 // if (!currval &&
                 if ( !currval ) {
-                    if (nptrs->compare_exchange_strong(currval, newVal,
-                                                       std::memory_order_release,
-                                                       std::memory_order_consume)) {
+                    if (nptrs->compare_exchange_weak(currval, newVal,
+                                                     std::memory_order_release,
+                                                     std::memory_order_consume)) {
                         ctx.hasq_ = 0;
                         return true;
                     }
                 } else {
+                    atomic_thread_fence(std::memory_order_seq_cst);
                     currval = nptrs->load(std::memory_order_consume);
                 }
-                atomic_thread_fence(std::memory_order_seq_cst);
             }
             return false;
         }
@@ -439,15 +439,15 @@ public:
         currval = nptrs->load(std::memory_order_consume);
         for (int n = _WFQ_MAX_TRY_; n > 0; n--) {
             if ( !currval ) {
-                if (nptrs->compare_exchange_strong(currval, newVal,
-                                                   std::memory_order_release,
-                                                   std::memory_order_consume)) {
+                if (nptrs->compare_exchange_weak(currval, newVal,
+                                                 std::memory_order_release,
+                                                 std::memory_order_consume)) {
                     return true;
                 }
             } else {
+                atomic_thread_fence(std::memory_order_seq_cst);
                 currval = nptrs->load(std::memory_order_consume);
             }
-            atomic_thread_fence(std::memory_order_seq_cst);
         }
         ctx.nptr_ = nptrs;
         ctx.pendingNewVal_ = newVal;
@@ -466,16 +466,16 @@ public:
             for (int n = _WFQ_MAX_TRY_; n > 0; n--) {
                 // if (!currval &&
                 if ( !currval ) {
-                    if (nptrs->compare_exchange_strong(currval, newVal,
-                                                       std::memory_order_release,
-                                                       std::memory_order_consume)) {
+                    if (nptrs->compare_exchange_weak(currval, newVal,
+                                                     std::memory_order_release,
+                                                     std::memory_order_consume)) {
                         ctx.hasq_ = 0;
                         return true;
                     }
                 } else {
+                    atomic_thread_fence(std::memory_order_seq_cst);
                     currval = nptrs->load(std::memory_order_consume);
                 }
-                atomic_thread_fence(std::memory_order_seq_cst);
             }
             return false;
         }
@@ -485,15 +485,15 @@ public:
         for (int n = _WFQ_MAX_TRY_; n > 0; n--) {
             // if (!currval &&
             if ( !currval ) {
-                if (nptrs->compare_exchange_strong(currval, newVal,
-                                                   std::memory_order_release,
-                                                   std::memory_order_consume)) {
+                if (nptrs->compare_exchange_weak(currval, newVal,
+                                                 std::memory_order_release,
+                                                 std::memory_order_consume)) {
                     return true;
                 }
             } else {
+                atomic_thread_fence(std::memory_order_seq_cst);
                 currval = nptrs->load(std::memory_order_consume);
             }
-            atomic_thread_fence(std::memory_order_seq_cst);
         }
         ctx.nptr_ = nptrs;
         ctx.hasq_ = 1;
@@ -509,18 +509,18 @@ public:
             val = nptrs->load(std::memory_order_consume);
             for (int n = _WFQ_MAX_TRY_; n > 0; n--) {
                 if ( val ) {
-                    if (nptrs->compare_exchange_strong(val, nullptr,
-                                                       std::memory_order_release,
-                                                       std::memory_order_consume)) {
+                    if (nptrs->compare_exchange_weak(val, nullptr,
+                                                     std::memory_order_release,
+                                                     std::memory_order_consume)) {
                         ctx.hasq_ = 0;
                         v = *val;
                         delete val;
                         return true;
                     }
                 } else {
+                    atomic_thread_fence(std::memory_order_seq_cst);
                     val = nptrs->load(std::memory_order_consume);
                 }
-                atomic_thread_fence(std::memory_order_seq_cst);
             }
             return false;
         }
@@ -530,17 +530,17 @@ public:
         val = nptrs->load(std::memory_order_consume);
         for (int n = _WFQ_MAX_TRY_; n > 0; n--) {
             if ( val ) {
-                if (nptrs->compare_exchange_strong(val, nullptr,
-                                                   std::memory_order_release,
-                                                   std::memory_order_consume)) {
+                if (nptrs->compare_exchange_weak(val, nullptr,
+                                                 std::memory_order_release,
+                                                 std::memory_order_consume)) {
                     v = *val;
                     delete val;
                     return true;
                 }
             } else {
+                atomic_thread_fence(std::memory_order_seq_cst);
                 val = nptrs->load(std::memory_order_consume);
             }
-            atomic_thread_fence(std::memory_order_seq_cst);
         }
 
         ctx.nptr_ = nptrs;
@@ -557,16 +557,16 @@ public:
             val = nptrs->load(std::memory_order_consume);
             for (int n = _WFQ_MAX_TRY_; n > 0; n--) {
                 if ( val ) {
-                    if (nptrs->compare_exchange_strong(val, nullptr,
-                                                       std::memory_order_release,
-                                                       std::memory_order_consume)) {
+                    if (nptrs->compare_exchange_weak(val, nullptr,
+                                                     std::memory_order_release,
+                                                     std::memory_order_consume)) {
                         ctx.hasq_ = 0;
                         return val;
                     }
                 } else {
+                    atomic_thread_fence(std::memory_order_seq_cst);
                     val = nptrs->load(std::memory_order_consume);
                 }
-                atomic_thread_fence(std::memory_order_seq_cst);
             }
             return nullptr;
         }
@@ -576,15 +576,15 @@ public:
         val = nptrs->load(std::memory_order_consume);
         for (int n = _WFQ_MAX_TRY_; n > 0; n--) {
             if ( val ) {
-                if (nptrs->compare_exchange_strong(val, nullptr,
-                                                   std::memory_order_release,
-                                                   std::memory_order_consume)) {
+                if (nptrs->compare_exchange_weak(val, nullptr,
+                                                 std::memory_order_release,
+                                                 std::memory_order_consume)) {
                     return val;
                 }
             } else {
+                atomic_thread_fence(std::memory_order_seq_cst);
                 val = nptrs->load(std::memory_order_consume);
             }
-            atomic_thread_fence(std::memory_order_seq_cst);
         }
 
         ctx.nptr_ = nptrs;
