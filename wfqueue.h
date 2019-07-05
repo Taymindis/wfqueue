@@ -87,12 +87,12 @@ typedef struct {
 /*
  * max_size - maximum size
  */
-static wfqueue_t *wfq_create(size_t max_sz);
-static int wfq_enq(wfqueue_t *q, void* val, wfq_enq_ctx_t *context);
-static int wfq_single_enq(wfqueue_t *q, void* val);
-static void* wfq_deq(wfqueue_t *q, wfq_deq_ctx_t *context);
-static void* wfq_single_deq(wfqueue_t *q);
-static void wfq_destroy(wfqueue_t *q);
+wfqueue_t *wfq_create(size_t max_sz);
+int wfq_enq(wfqueue_t *q, void* val, wfq_enq_ctx_t *context);
+int wfq_single_enq(wfqueue_t *q, void* val);
+void* wfq_deq(wfqueue_t *q, wfq_deq_ctx_t *context);
+void* wfq_single_deq(wfqueue_t *q);
+void wfq_destroy(wfqueue_t *q);
 static inline void *_wfq_malloc(size_t alignment, size_t size) {
 #if ( __clang__ || _POSIX_C_SOURCE >= 200112L || _XOPEN_SOURCE >= 600 )
     void * ptr;
@@ -110,7 +110,7 @@ static inline void *_wfq_malloc(size_t alignment, size_t size) {
 
 }
 
-static wfqueue_t *
+wfqueue_t *
 wfq_create(size_t max_sz) {
     size_t i;
     wfqueue_t *q = (wfqueue_t *)_wfq_malloc(64, sizeof(wfqueue_t));
@@ -171,7 +171,7 @@ static inline void *wfq_single_deq_must(wfqueue_t *q) {
     return _v;
 }
 
-static int
+int
 wfq_enq(wfqueue_t *q, void* val, wfq_enq_ctx_t *ctx) {
     // ADD_DEBUG_CYC_COUNT;
     int n;
@@ -214,7 +214,7 @@ wfq_enq(wfqueue_t *q, void* val, wfq_enq_ctx_t *ctx) {
     return 0;
 }
 
-static int
+int
 wfq_single_enq(wfqueue_t *q, void* val) {
     size_t head;
     void *currval, * volatile *nptrs;
@@ -236,7 +236,7 @@ wfq_single_enq(wfqueue_t *q, void* val) {
     return 0;
 }
 
-static void*
+void*
 wfq_deq(wfqueue_t *q, wfq_deq_ctx_t *ctx) {
     // ADD_DEBUG_CYC_COUNT;
     size_t tail;
@@ -280,7 +280,7 @@ wfq_deq(wfqueue_t *q, wfq_deq_ctx_t *ctx) {
     return _WFQ_NULL_;
 }
 
-static void*
+void*
 wfq_single_deq(wfqueue_t *q) {
     // ADD_DEBUG_CYC_COUNT;
     size_t tail;
@@ -304,7 +304,7 @@ wfq_single_deq(wfqueue_t *q) {
     return _WFQ_NULL_;
 }
 
-static void
+void
 wfq_destroy(wfqueue_t *q) {
     free((void**) q->nptr);
     free(q);
